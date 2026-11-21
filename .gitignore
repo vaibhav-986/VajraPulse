@@ -1,0 +1,40 @@
+# .NET build output
+bin/
+obj/
+**/bin/
+**/obj/
+artifacts/
+TestResults/
+coverage/
+*.trx
+
+# Visual Studio and local tooling
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Local configuration and runtime output
+.env
+.env.*
+!.env.example
+*.log
+last-error.txt
+
+# Generated test artifacts
+tests/*.png
+tests/**/*.png
+tests/**/WpfBuild/
+
+# Generated packaging output and signing material
+packaging/sdk-tools-*/
+packaging/payload-*/
+packaging/*.msix
+packaging/*.msixbundle
+packaging/*.appx
+packaging/*.appxbundle
+packaging/*.cer
+*.pfx
+*.p12
+*.snk
