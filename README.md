@@ -1,6 +1,8 @@
 # Vajra Pulse
 
-A native Windows desktop island with a true-black compact pill, single-activity expansion, live Windows integrations, and optional notification previews. No browser, account, camera access, startup registration, or telemetry is required.
+**Version 1.2.0**
+
+A native Windows desktop island with a true-black compact pill, single-activity expansion, live Windows integrations, five app-launch slots, local system activity, and per-app audio mixing. No browser account, camera access, cloud service, or telemetry is required.
 
 ## Run
 
@@ -15,7 +17,9 @@ Double-click `Start-VajraPulse.cmd`. The ordinary app uses the installed .NET 8 
 - Hover to expand; move away to collapse a hover-opened island.
 - Click to keep it open while interacting; click away or press Escape to tuck it away.
 - Ctrl + Alt + Space expands/collapses or reveals the island.
-- Use the Music, Focus, Files, Calendar, and Alerts tabs for one activity at a time.
+- Use the Music, Focus, Files, Calendar, Alerts, and Tools tabs for one activity at a time.
+- The optional side buttons open System tools, Bluetooth Settings, and Wi-Fi Settings; each can be shown or hidden independently in Settings.
+- Tools remains available from the expanded island and contains local CPU/memory/network activity, five app shortcuts, and the active-app volume mixer.
 - Right-click the pill for Settings; the tray menu provides show/hide, settings, and quit.
 - If a timer and media session are both present, the secondary artwork bubble opens music without stopping the timer.
 
@@ -38,6 +42,26 @@ System volume and mute are available in Settings. Internal-display brightness is
 ### Headphones
 
 A brief badge appears when headphones/headsets become the active default multimedia audio endpoint. Other output-device changes are also identified. This is default-device sensing, not universal Bluetooth battery reporting or detection of every non-active accessory.
+
+### System activity and connectivity buttons
+
+Choose the side **System** button to open local aggregate CPU usage, physical-memory usage, and active-interface download/upload rates. Values come from Windows counters and are not sent anywhere or stored as history. A first sample, changed adapter, unsupported counter, or unavailable service is labeled as warming up or unavailable rather than shown as a fabricated zero.
+
+The separate Bluetooth and Wi-Fi buttons show best-effort local status and open the matching Windows Settings page when clicked. The System/CPU, Bluetooth, and Wi-Fi side buttons default to visible and can be hidden independently in Settings; the expanded Tools tab remains available even when all three are hidden. The buttons never toggle a radio, connect to a network, pair a device, or read/store Wi-Fi names. Windows can report Bluetooth connection and battery properties differently across devices.
+
+### Five app shortcuts
+
+Settings provides exactly five app slots. Choose or replace a slot to open Vajra Pulse's searchable installed-app list. Traditional desktop entries come from the current-user and shared Start Menu Programs folders; packaged Windows entries come from the current user's registered app list. Search is local, lazy, bounded, and never sent anywhere. Vajra Pulse does not scan Program Files, uninstall registry records, other users' private profiles, or the network.
+
+Select an app to save it to the slot, then open it explicitly from **Tools → Apps**. Packaged apps keep their Windows app identity, and desktop apps keep their Start Menu shortcut behavior. **Advanced browse** remains available for a local `.exe` or `.lnk` that does not appear in the catalog. Targets are rechecked before launch, and missing or removed apps are shown as unavailable.
+
+Nothing launches during catalog loading, searching, selection, startup, settings load, or when the Apps panel opens. Clearing a slot removes only Vajra Pulse's local reference; it never changes or uninstalls the selected application. The catalog, search text, icons, and launch history are not persisted.
+
+### Per-app volume mixer
+
+**Tools → Mixer** lists active Core Audio application sessions on the current default output device. Each listed app has its own volume slider and mute button; changing one does not intentionally change the master volume or another app. Apps with several audio sessions are grouped, and mixed levels are identified before a new level is applied to that group.
+
+The list can change while apps start, stop, or move to another output device. Enumerating volume sessions does not capture, record, or upload audio and does not request microphone access. Automated verification reads session state but never changes real app volume.
 
 ### Bluetooth battery
 
@@ -80,8 +104,15 @@ Windows requires package identity and user consent. The ordinary app reports thi
 ```powershell
 dotnet build .\VajraPulse.csproj -c Release
 dotnet run --project .\tests\VajraPulse.CoreTests.csproj -c Release
+dotnet run --project .\tests\ActivityTests\ActivityTests.csproj -c Release
 dotnet run --project .\tests\CalendarTests\CalendarTests.csproj -c Release
 dotnet run --project .\tests\FeatureTests\FeatureTests.csproj -c Release
+dotnet run --project .\tests\BluetoothTests\BluetoothTests.csproj -c Release
+dotnet run --project .\tests\ClipboardTests\ClipboardTests.csproj -c Release
+dotnet run --project .\tests\DownloadTests\DownloadTests.csproj -c Release
+dotnet run --project .\tests\OcrTests\OcrTests.csproj -c Release
+dotnet run --project .\tests\PrivacyTests\PrivacyTests.csproj -c Release
+dotnet run --project .\tests\ToolsTests\ToolsTests.csproj -c Release
 .\tests\DesktopSmoke.ps1 -Mode Exercise
 .\tests\AdvancedDesktopSmoke.ps1
 ```
@@ -90,14 +121,15 @@ The advanced desktop test uses clearly labeled temporary fixtures, imports and c
 
 ## Storage and limits
 
-Preferences, active focus state, shelf path references, and the selected calendar file path are stored in `%LOCALAPPDATA%\VajraPulse\settings.json`. Notification bodies are not persisted. A runtime crash report, if needed, is written to `last-error.txt`. Display selection does not survive restart. The decorative lens never opens the camera. This app does not mirror phone calls or phone activity.
+Preferences, side-button visibility, active focus state, shelf path references, the selected calendar file path, and five selected app references are stored in `%LOCALAPPDATA%\VajraPulse\settings.json`. CPU, memory, network, Wi-Fi, Bluetooth, launch history, audio-session state, and notification bodies are not persisted. A runtime crash report, if needed, is written to `last-error.txt`. Display selection does not survive restart. The decorative lens never opens the camera. This app does not mirror phone calls or phone activity.
 
 ## Source
 
 - `MainWindow.xaml` / `.xaml.cs`: layout, compact/expanded interaction, polling, and animation.
-- `MainWindow.Features.cs`: live states, shelf, seeking, brightness, calendar, and privacy flows.
+- `MainWindow.Features.cs`: existing live states, shelf, seeking, brightness, calendar, and privacy flows.
+- `MainWindow.Tools.cs`: system telemetry, connectivity rail, app slots, and active-app mixer UI.
 - `Core/`: independent timer and island state logic.
-- `Services/`: Windows integrations and bounded local data handling.
+- `Services/SystemTelemetryService.cs`, `WifiStatusService.cs`, `InstalledAppCatalogService.cs`, `AppLauncherService.cs`, and `AudioSessionService.cs`: bounded Windows 1.2 integrations.
 - `UI/PulseTheme.xaml`: native visual theme.
 - `tests/`: standalone regression and desktop smoke tests.
 - `packaging/`: optional notification-capable packaging and opt-in installation.

@@ -9,6 +9,16 @@
  UseLayoutRounding="True" SnapsToDevicePixels="True"
  KeyDown="Window_KeyDown" Deactivated="Window_Deactivated">
  <Grid>
+  <StackPanel x:Name="SideRail" Width="32" Margin="0,8,0,0" VerticalAlignment="Top" HorizontalAlignment="Center"
+   MouseEnter="InteractiveChrome_MouseEnter" MouseLeave="InteractiveChrome_MouseLeave">
+   <StackPanel.RenderTransform><TranslateTransform x:Name="SideRailPosition" X="104" /></StackPanel.RenderTransform>
+   <Button x:Name="SystemRailButton" Style="{StaticResource RailButton}" Content="&#xE950;" Click="SystemRail_Click"
+    ToolTip="System activity" AutomationProperties.Name="Open System tools" />
+   <Button x:Name="BluetoothRailButton" Style="{StaticResource RailButton}" Content="&#xE702;" Click="BluetoothRail_Click"
+    ToolTip="Checking Bluetooth" AutomationProperties.Name="Open Bluetooth settings" />
+   <Button x:Name="WifiRailButton" Style="{StaticResource RailButton}" Content="&#xE701;" Click="WifiRail_Click"
+    ToolTip="Checking Wi-Fi" AutomationProperties.Name="Open Wi-Fi settings" />
+  </StackPanel>
   <Button x:Name="SatelliteButton" Width="34" Height="36" Margin="0,8,0,0"
    VerticalAlignment="Top" HorizontalAlignment="Center" Visibility="Collapsed"
    Style="{StaticResource GhostButton}" Background="Black" Padding="5,0"
@@ -61,7 +71,7 @@
      </StackPanel>
     </Grid>
     <Grid x:Name="ExpandedPanel" Visibility="Collapsed" Opacity="0" Margin="20,14,20,12">
-     <Grid.RowDefinitions><RowDefinition Height="24" /><RowDefinition Height="6" /><RowDefinition Height="122" /><RowDefinition Height="6" /><RowDefinition Height="24" /></Grid.RowDefinitions>
+     <Grid.RowDefinitions><RowDefinition Height="24" /><RowDefinition Height="6" /><RowDefinition x:Name="ExpandedContentRow" Height="122" /><RowDefinition Height="6" /><RowDefinition Height="24" /></Grid.RowDefinitions>
      <Grid>
       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="28" /><ColumnDefinition Width="28" /></Grid.ColumnDefinitions>
       <TextBlock x:Name="HeaderSubtitle" Text="Now playing" FontSize="11" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
@@ -145,6 +155,42 @@
       <TextBlock x:Name="InboxBody" Grid.Row="2" Text="Enable previews in Settings, then choose apps. No messages have been read." FontSize="11" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
       <Grid Grid.Row="3"><Button Content="Privacy settings" Style="{StaticResource PulseButton}" HorizontalAlignment="Left" Click="Settings_Click" /><Button Content="Next alert" Style="{StaticResource GhostButton}" HorizontalAlignment="Right" Click="Inbox_Next_Click" /></Grid>
      </Grid>
+     <Grid x:Name="ToolsActivity" Grid.Row="2" Visibility="Collapsed">
+      <Grid.RowDefinitions><RowDefinition Height="30" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+       <Button x:Name="SystemToolSelector" Content="System" Style="{StaticResource ToolSelectorButton}" Click="SystemTool_Click" AutomationProperties.Name="Show system activity" />
+       <Button x:Name="AppsToolSelector" Content="Apps" Style="{StaticResource ToolSelectorButton}" Click="AppsTool_Click" AutomationProperties.Name="Show application shortcuts" />
+       <Button x:Name="MixerToolSelector" Content="Mixer" Style="{StaticResource ToolSelectorButton}" Click="MixerTool_Click" AutomationProperties.Name="Show application volume mixer" />
+      </StackPanel>
+      <Grid x:Name="SystemToolsPanel" Grid.Row="1" Margin="0,6,0,0">
+       <Grid.RowDefinitions><RowDefinition Height="58" /><RowDefinition Height="58" /><RowDefinition Height="58" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+       <Grid><Grid.RowDefinitions><RowDefinition Height="22" /><RowDefinition Height="18" /></Grid.RowDefinitions>
+        <TextBlock Text="CPU" FontSize="11" Foreground="{StaticResource MutedBrush}" /><TextBlock x:Name="CpuValueText" Text="Warming up" HorizontalAlignment="Right" FontSize="11" />
+        <ProgressBar x:Name="CpuMeter" Grid.Row="1" Style="{StaticResource PulseProgress}" Minimum="0" Maximum="100" Value="0" AutomationProperties.Name="CPU usage" />
+       </Grid>
+       <Grid Grid.Row="1"><Grid.RowDefinitions><RowDefinition Height="22" /><RowDefinition Height="18" /></Grid.RowDefinitions>
+        <TextBlock Text="Memory" FontSize="11" Foreground="{StaticResource MutedBrush}" /><TextBlock x:Name="MemoryValueText" Text="Checking" HorizontalAlignment="Right" FontSize="11" />
+        <ProgressBar x:Name="MemoryMeter" Grid.Row="1" Style="{StaticResource PulseProgress}" Minimum="0" Maximum="100" Value="0" AutomationProperties.Name="Memory usage" />
+       </Grid>
+       <Grid Grid.Row="2"><Grid.RowDefinitions><RowDefinition Height="22" /><RowDefinition Height="22" /></Grid.RowDefinitions>
+        <TextBlock Text="Network" FontSize="11" Foreground="{StaticResource MutedBrush}" /><TextBlock x:Name="NetworkInterfaceText" Text="Checking" HorizontalAlignment="Right" FontSize="10" Foreground="{StaticResource MutedBrush}" />
+        <StackPanel Grid.Row="1" Orientation="Horizontal"><TextBlock Text="Down " Foreground="{StaticResource MutedBrush}" FontSize="11" /><TextBlock x:Name="NetworkDownText" Text="—" FontSize="11" Width="92" /><TextBlock Text="Up " Foreground="{StaticResource MutedBrush}" FontSize="11" /><TextBlock x:Name="NetworkUpText" Text="—" FontSize="11" /></StackPanel>
+       </Grid>
+       <TextBlock x:Name="SystemTelemetryStatus" Grid.Row="3" Text="Local system counters only" FontSize="9" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" VerticalAlignment="Bottom" />
+      </Grid>
+      <Grid x:Name="AppsToolsPanel" Grid.Row="1" Margin="0,6,0,0" Visibility="Collapsed">
+       <ItemsControl x:Name="LaunchSlotsList" AutomationProperties.Name="Five application launch slots">
+        <ItemsControl.ItemTemplate><DataTemplate><Button Style="{StaticResource PulseButton}" Height="36" Margin="0,0,0,4" HorizontalContentAlignment="Stretch" Tag="{Binding}" Click="LaunchSlot_Click" ToolTip="{Binding Detail}" AutomationProperties.Name="{Binding AutomationName}" AutomationProperties.HelpText="{Binding AutomationHelpText}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28" /><ColumnDefinition Width="*" /><ColumnDefinition Width="100" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Number}" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" /><TextBlock Grid.Column="2" Text="{Binding VisibleDetail}" Margin="8,0,0,0" Foreground="{StaticResource MutedBrush}" FontSize="9" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" VerticalAlignment="Center" /></Grid></Button></DataTemplate></ItemsControl.ItemTemplate>
+       </ItemsControl>
+      </Grid>
+      <Grid x:Name="MixerToolsPanel" Grid.Row="1" Margin="0,6,0,0" Visibility="Collapsed">
+       <TextBlock x:Name="MixerEmptyText" Text="Checking active application audio…" Foreground="{StaticResource MutedBrush}" TextAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Center" />
+       <ListBox x:Name="MixerList" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextBrush}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Active application volume mixer">
+        <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="Focusable" Value="False" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0,0,0,5" /><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><ContentPresenter /></ControlTemplate></Setter.Value></Setter></Style></ListBox.ItemContainerStyle>
+        <ListBox.ItemTemplate><DataTemplate><Grid Height="42"><Grid.ColumnDefinitions><ColumnDefinition Width="100" /><ColumnDefinition Width="*" /><ColumnDefinition Width="42" /><ColumnDefinition Width="30" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Name}" FontSize="10" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding Name}" /><Slider Grid.Column="1" Style="{StaticResource PulseSlider}" Minimum="0" Maximum="100" Value="{Binding Volume, Mode=OneWay}" Tag="{Binding}" PreviewMouseLeftButtonUp="MixerVolume_MouseUp" PreviewKeyUp="MixerVolume_KeyUp" AutomationProperties.Name="{Binding VolumeAutomationName}" /><TextBlock Grid.Column="2" Text="{Binding VolumeText}" FontSize="9" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" /><Button Grid.Column="3" Style="{StaticResource IconButton}" Width="28" Height="28" MinHeight="28" Content="{Binding MuteGlyph}" Tag="{Binding}" Click="MixerMute_Click" AutomationProperties.Name="{Binding MuteAutomationName}" /></Grid></DataTemplate></ListBox.ItemTemplate>
+       </ListBox>
+      </Grid>
+     </Grid>
      <Grid Grid.Row="4">
       <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
        <Button x:Name="MusicTab" Content="Music" Style="{StaticResource GhostButton}" FontSize="10" MinHeight="24" Padding="0,0,8,0" Click="MusicTab_Click" AutomationProperties.Name="Show music controls" />
@@ -152,7 +198,8 @@
        <Button x:Name="FocusTab" Content="Focus" Style="{StaticResource GhostButton}" FontSize="10" MinHeight="24" Padding="8,0" Click="FocusTab_Click" AutomationProperties.Name="Show focus timer" />
        <Button x:Name="FilesTab" Content="Files" Style="{StaticResource GhostButton}" FontSize="10" MinHeight="24" Padding="8,0" Click="FilesTab_Click" AutomationProperties.Name="Show file shelf" />
        <Button x:Name="CalendarTab" Content="Calendar" Style="{StaticResource GhostButton}" FontSize="10" MinHeight="24" Padding="8,0" Click="CalendarTab_Click" AutomationProperties.Name="Show calendar" />
-       <Button x:Name="InboxTab" Content="Alerts" Style="{StaticResource GhostButton}" FontSize="10" MinHeight="24" Padding="8,0" Click="InboxTab_Click" AutomationProperties.Name="Show notification previews" />
+       <Button x:Name="InboxTab" Content="Alerts" Style="{StaticResource GhostButton}" FontSize="10" MinHeight="24" Padding="7,0" Click="InboxTab_Click" AutomationProperties.Name="Show notification previews" />
+       <Button x:Name="ToolsTab" Content="Tools" Style="{StaticResource GhostButton}" FontSize="10" MinHeight="24" Padding="7,0" Click="ToolsTab_Click" AutomationProperties.Name="Show tools" />
       </StackPanel>
       <TextBlock x:Name="BatteryText" FontSize="10" Text="Battery" Foreground="#75757A" HorizontalAlignment="Right" VerticalAlignment="Center" />
      </Grid>
@@ -169,6 +216,10 @@
       <CheckBox x:Name="FullscreenCheck" Content="Hide over fullscreen apps" Style="{StaticResource PulseCheckBox}" Click="Preferences_Changed" />
       <CheckBox x:Name="MotionCheck" Content="Reduce motion" Style="{StaticResource PulseCheckBox}" Click="Preferences_Changed" />
       <CheckBox x:Name="ClockCheck" Content="Show clock when idle" Style="{StaticResource PulseCheckBox}" Click="Preferences_Changed" />
+      <TextBlock Text="Side buttons" Style="{StaticResource SectionLabel}" Margin="0,10,0,2" />
+      <CheckBox x:Name="SystemRailCheck" Content="Show System / CPU side button" Style="{StaticResource PulseCheckBox}" Click="Preferences_Changed" AutomationProperties.Name="Show System side button" />
+      <CheckBox x:Name="BluetoothRailCheck" Content="Show Bluetooth side button" Style="{StaticResource PulseCheckBox}" Click="Preferences_Changed" AutomationProperties.Name="Show Bluetooth side button" />
+      <CheckBox x:Name="WifiRailCheck" Content="Show Wi-Fi side button" Style="{StaticResource PulseCheckBox}" Click="Preferences_Changed" AutomationProperties.Name="Show Wi-Fi side button" />
       <CheckBox x:Name="StartWithWindowsCheck" Content="Start with Windows" Style="{StaticResource PulseCheckBox}" Click="Startup_Changed" />
       <Grid Margin="0,12,0,0"><TextBlock Text="Distance from top edge" Style="{StaticResource SectionLabel}" /><TextBlock x:Name="GapText" Text="10 px" Style="{StaticResource SectionLabel}" HorizontalAlignment="Right" /></Grid>
       <Slider x:Name="GapSlider" Style="{StaticResource PulseSlider}" Minimum="0" Maximum="80" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="Gap_Changed" AutomationProperties.Name="Distance from screen top" />
@@ -183,6 +234,10 @@
       <TextBlock Text="Brightness" Style="{StaticResource SectionLabel}" Margin="0,12,0,0" />
       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="34" /></Grid.ColumnDefinitions><Slider x:Name="BrightnessSlider" Style="{StaticResource PulseSlider}" Minimum="0" Maximum="100" ValueChanged="Brightness_Changed" PreviewMouseLeftButtonUp="Brightness_MouseUp" PreviewKeyUp="Brightness_KeyUp" AutomationProperties.Name="Internal display brightness" /><TextBlock x:Name="BrightnessValue" Grid.Column="1" FontSize="10" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" /></Grid>
       <TextBlock x:Name="BrightnessStatus" Text="Checking display support…" FontSize="9" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
+      <TextBlock Text="App launch slots" Style="{StaticResource SectionLabel}" Margin="0,14,0,6" />
+      <ItemsControl x:Name="SettingsLaunchSlotsList" AutomationProperties.Name="Configure five application launch slots">
+       <ItemsControl.ItemTemplate><DataTemplate><Grid Height="34" Margin="0,0,0,3"><Grid.ColumnDefinitions><ColumnDefinition Width="24" /><ColumnDefinition Width="*" /><ColumnDefinition Width="58" /><ColumnDefinition Width="44" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Number}" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="10" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" /><Button Grid.Column="2" Content="{Binding ChooseLabel}" Style="{StaticResource GhostButton}" FontSize="9" Padding="3" MinHeight="28" Tag="{Binding}" Click="LaunchSlotChoose_Click" AutomationProperties.Name="{Binding ChooseAutomationName}" AutomationProperties.HelpText="{Binding Name}" /><Button Grid.Column="3" Content="Clear" Style="{StaticResource GhostButton}" FontSize="9" Padding="3" MinHeight="28" Tag="{Binding}" Click="LaunchSlotClear_Click" IsEnabled="{Binding IsConfigured}" AutomationProperties.Name="{Binding ClearAutomationName}" /></Grid></DataTemplate></ItemsControl.ItemTemplate>
+      </ItemsControl>
       <TextBlock Text="Notification privacy" Style="{StaticResource SectionLabel}" Margin="0,14,0,6" />
       <CheckBox x:Name="NotificationsCheck" Content="Enable notification previews" Style="{StaticResource PulseCheckBox}" Click="Notifications_Enable_Click" />
       <CheckBox x:Name="HideNotificationCheck" Content="Hide message content" Style="{StaticResource PulseCheckBox}" Click="NotificationPrivacy_Changed" />
@@ -197,6 +252,18 @@
       <TextBlock x:Name="ShortcutText" Visibility="Collapsed" />
       <Button Content="Quit" Style="{StaticResource GhostButton}" HorizontalAlignment="Right" MinHeight="28" Click="Quit_Click" />
      </Grid>
+    </Grid>
+    <Grid x:Name="AppCatalogPanel" Visibility="Collapsed" Opacity="0" Margin="20,16,20,14">
+     <Grid.RowDefinitions><RowDefinition Height="42" /><RowDefinition Height="36" /><RowDefinition Height="24" /><RowDefinition Height="*" /><RowDefinition Height="38" /><RowDefinition Height="32" /></Grid.RowDefinitions>
+     <Grid><StackPanel VerticalAlignment="Center"><TextBlock x:Name="AppCatalogTitle" Text="Choose an app" FontSize="17" FontWeight="SemiBold" /><TextBlock Text="Installed apps on this Windows account" FontSize="10" Foreground="{StaticResource MutedBrush}" /></StackPanel><Button Style="{StaticResource IconButton}" Content="&#xE72B;" HorizontalAlignment="Right" Click="AppCatalog_Back_Click" ToolTip="Back" AutomationProperties.Name="Back to Settings" /></Grid>
+     <TextBox x:Name="AppCatalogSearch" Grid.Row="1" Background="{StaticResource PanelBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource LineBrush}" Padding="10,5" TextChanged="AppCatalogSearch_Changed" AutomationProperties.Name="Search installed apps" />
+     <TextBlock x:Name="AppCatalogStatus" Grid.Row="2" Text="Choose a slot to load installed apps." FontSize="9" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+     <ListBox x:Name="AppCatalogResults" Grid.Row="3" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextBrush}" SelectionChanged="AppCatalogSelection_Changed" ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" AutomationProperties.Name="Installed app results">
+      <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0,0,0,4" /><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="Row" Background="{StaticResource PanelBrush}" CornerRadius="10" Padding="8,5"><ContentPresenter /></Border><ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="Row" Property="Background" Value="{StaticResource PanelHoverBrush}" /></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style></ListBox.ItemContainerStyle>
+      <ListBox.ItemTemplate><DataTemplate><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28" /><ColumnDefinition Width="*" /><ColumnDefinition Width="80" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Glyph}" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" /><TextBlock Grid.Column="2" Text="{Binding Source}" FontSize="9" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" /></Grid></DataTemplate></ListBox.ItemTemplate>
+     </ListBox>
+     <Button x:Name="AppCatalogAddButton" Grid.Row="4" Content="Add to slot" Style="{StaticResource AccentButton}" IsEnabled="False" Click="AppCatalog_Add_Click" AutomationProperties.Name="Add selected app to slot" />
+     <Grid Grid.Row="5"><Button Content="Refresh" Style="{StaticResource GhostButton}" FontSize="9" HorizontalAlignment="Left" Click="AppCatalog_Refresh_Click" AutomationProperties.Name="Refresh installed app list" /><Button Content="Advanced browse" Style="{StaticResource GhostButton}" FontSize="9" HorizontalAlignment="Right" Click="AppCatalog_AdvancedBrowse_Click" AutomationProperties.Name="Advanced browse for application" /></Grid>
     </Grid>
    </Grid>
   </Border>
