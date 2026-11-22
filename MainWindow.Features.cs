@@ -74,6 +74,8 @@ public partial class MainWindow
         if (_closed) return;
         RefreshDownloadActivity();
         RenderDesktopActivity();
+        await InitializeToolsAsync();
+        if (_closed) return;
         if (_settings.NotificationsEnabled)
         {
             var access = await _notifications.EnableAsync(false);
@@ -87,6 +89,7 @@ public partial class MainWindow
     {
         _seekDebounce.Stop(); _brightnessDebounce.Stop();
         _notifications.Dispose(); _privacyUsage.Dispose(); _downloads.Dispose();
+        DisposeTools();
         _recentAlerts.Clear();
     }
     private void CaptureFeaturePreferences() { if (_featuresInitialized) _settings.ShelfPaths = _shelf.SavedPaths(); }
@@ -112,6 +115,8 @@ public partial class MainWindow
             RefreshDownloadActivity();
             _desktopActivities.Tick();
             RenderDesktopActivity();
+            await TickToolsAsync();
+            if (_closed) return;
             if (_ticks % 5 == 0 && _settings.NotificationsEnabled) await SyncNotifications();
             if (_closed) return;
             if (_ticks % 15 == 0) UpdateCalendar(true);
@@ -171,7 +176,9 @@ public partial class MainWindow
         try
         {
             BluetoothBatterySnapshot snapshot = await _bluetoothBattery.PollAsync();
-            if (_closed || !snapshot.IsSupported) return;
+            if (_closed) return;
+            UpdateBluetoothRail(snapshot);
+            if (!snapshot.IsSupported) return;
 
             BluetoothBatteryDevice[] connected = snapshot.Devices.Where(device => device.IsConnected).ToArray();
             foreach (BluetoothBatteryDevice device in connected)
@@ -318,7 +325,7 @@ public partial class MainWindow
             }
             if (_liveKind == LiveKind.Bluetooth)
             {
-                Process.Start(new ProcessStartInfo("ms-settings:bluetooth") { UseShellExecute = true });
+                OpenWindowsSettings("ms-settings:bluetooth");
                 return;
             }
 
@@ -516,7 +523,7 @@ public partial class MainWindow
         if (Math.Abs(current.X - _shelfDragStart.X) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(current.Y - _shelfDragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
         _shelfDragging = true;
         try { DragDrop.DoDragDrop(ShelfList, new DataObject(DataFormats.FileDrop, new[] { file.Path }), DragDropEffects.Copy | DragDropEffects.Link); }
-        finally { _shelfDragging = false; _dropHover = false; if (!Island.IsMouseOver) Collapse(); }
+        finally { _shelfDragging = false; _dropHover = false; if (!IsPointerOverInteractiveChrome()) Collapse(); }
     }
     private void Window_DragEnter(object sender, DragEventArgs e)
     {

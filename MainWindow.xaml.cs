@@ -42,6 +42,7 @@ public partial class MainWindow : Window
     {
         _settings = SettingsStore.Load();
         InitializeComponent();
+        ApplyRailVisibility();
         _monitor = EnvironmentService.PrimaryScreenBounds();
         IsVisibleChanged += (_, _) => UpdatePlaybackAnimation();
         _hotkey = new HotkeyService(this, ToggleFromShortcut);
@@ -63,7 +64,7 @@ public partial class MainWindow : Window
             ShortcutText.Text = _hotkey.IsRegistered ? "Ctrl + Alt + Space" : "Shortcut unavailable · use tray";
             _tick.Tick += Tick;
             _hover.Tick += (_, _) => { _hover.Stop(); if (Island.IsMouseOver && _state.Mode == IslandMode.Compact && _notice == null) Expand(false); };
-            _leave.Tick += (_, _) => { _leave.Stop(); if (!Island.IsMouseOver && !_pinned && !_featuresModal && !_dropHover && !_shelfDragging) Collapse(); };
+            _leave.Tick += (_, _) => { _leave.Stop(); if (!IsPointerOverInteractiveChrome() && !_pinned && !_featuresModal && !_dropHover && !_shelfDragging) Collapse(); };
             _focus.Completed += (_, _) =>
             {
                 SavePreferences();
@@ -188,7 +189,7 @@ public partial class MainWindow : Window
 
     private void UpdateActivity()
     {
-        var activities = new[] { (Activity.Music, MusicActivity, MusicTab), (Activity.Focus, TimerActivity, FocusTab), (Activity.Shelf, ShelfActivity, FilesTab), (Activity.Calendar, CalendarActivity, CalendarTab), (Activity.Inbox, InboxActivity, InboxTab) };
+        var activities = new[] { (Activity.Music, MusicActivity, MusicTab), (Activity.Focus, TimerActivity, FocusTab), (Activity.Shelf, ShelfActivity, FilesTab), (Activity.Calendar, CalendarActivity, CalendarTab), (Activity.Inbox, InboxActivity, InboxTab), (Activity.Tools, ToolsActivity, ToolsTab) };
         foreach (var (kind, panel, button) in activities)
         {
             panel.Visibility = _activity == kind ? Visibility.Visible : Visibility.Collapsed;
@@ -200,6 +201,7 @@ public partial class MainWindow : Window
             Activity.Shelf => $"File shelf · {_shelf.Files.Count} shortcuts",
             Activity.Calendar => "Next meeting",
             Activity.Inbox => "Notification previews",
+            Activity.Tools => _toolSection switch { ToolSection.Apps => "App shortcuts", ToolSection.Mixer => "App volume mixer", _ => "System activity" },
             _ => _media.Snapshot.HasSession ? _media.Snapshot.IsPlaying ? "Now playing" : "Paused" : "Music"
         });
     }
@@ -209,7 +211,8 @@ public partial class MainWindow : Window
         _activity = activity;
         _activityChosen = true;
         UpdateActivity();
-        var panel = activity switch { Activity.Focus => TimerActivity, Activity.Shelf => ShelfActivity, Activity.Calendar => CalendarActivity, Activity.Inbox => InboxActivity, _ => MusicActivity };
+        var panel = activity switch { Activity.Focus => TimerActivity, Activity.Shelf => ShelfActivity, Activity.Calendar => CalendarActivity, Activity.Inbox => InboxActivity, Activity.Tools => ToolsActivity, _ => MusicActivity };
+        UpdateExpandedSizing();
         panel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(_settings.ReducedMotion ? 0 : 160)));
     }
     private void MusicTab_Click(object sender, RoutedEventArgs e) => SetActivity(Activity.Music);
@@ -320,7 +323,7 @@ public partial class MainWindow : Window
             double width = notice ? live ? 300 : 320 : focus ? 184 : mediaPresent ? 176 : _settings.ShowClock ? 140 : 124;
             CompactRow.Width = width - 20;
             ResizeIsland(width, notice ? live ? 52 : 42 : 36);
-            SatellitePosition.X = width / 2 + 22;
+            SatellitePosition.X = -(width / 2 + 22);
         }
         SatelliteButton.Visibility = _state.Mode == IslandMode.Compact && focus && mediaPresent && !notice ? Visibility.Visible : Visibility.Collapsed;
         UpdateActivity();
@@ -346,8 +349,21 @@ public partial class MainWindow : Window
         }
     }
 
+    private void UpdateExpandedSizing()
+    {
+        if (_state.Mode == IslandMode.Settings)
+        {
+            ResizeIsland(366, 414);
+            return;
+        }
+        bool tools = _activity == Activity.Tools;
+        ExpandedContentRow.Height = new GridLength(tools ? 242 : 122);
+        ResizeIsland(366, tools ? 330 : 210);
+    }
+
     private void ResizeIsland(double width, double height)
     {
+        SideRailPosition.X = width / 2 + 22;
         if (_targetWidth != width) { _targetWidth = width; Animate(Island, WidthProperty, width); }
         if (_targetHeight != height) { _targetHeight = height; Animate(Island, HeightProperty, height); }
     }
@@ -382,6 +398,7 @@ public partial class MainWindow : Window
         _userHidden = false;
         Show();
         _pinned = true;
+        _catalogOpen = false;
         _state.OpenSettings();
         LoadPreferences();
         ApplyMode();
@@ -394,12 +411,13 @@ public partial class MainWindow : Window
         bool settings = _state.Mode == IslandMode.Settings;
         CompactButton.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
         ExpandedPanel.Visibility = !compact && !settings ? Visibility.Visible : Visibility.Collapsed;
-        SettingsPanel.Visibility = settings ? Visibility.Visible : Visibility.Collapsed;
-        if (!compact) ResizeIsland(366, settings ? 414 : 210);
+        SettingsPanel.Visibility = settings && !_catalogOpen ? Visibility.Visible : Visibility.Collapsed;
+        AppCatalogPanel.Visibility = settings && _catalogOpen ? Visibility.Visible : Visibility.Collapsed;
+        if (!compact) UpdateExpandedSizing();
         Island.CornerRadius = new CornerRadius(compact ? 24 : 32);
         if (!compact)
         {
-            var panel = settings ? SettingsPanel : ExpandedPanel;
+            var panel = settings ? _catalogOpen ? AppCatalogPanel : SettingsPanel : ExpandedPanel;
             panel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(_settings.ReducedMotion ? 0 : 180)) { BeginTime = TimeSpan.FromMilliseconds(_settings.ReducedMotion ? 0 : 90) });
         }
         UpdateCompact();
@@ -424,6 +442,10 @@ public partial class MainWindow : Window
         FullscreenCheck.IsChecked = _settings.HideInFullscreen;
         MotionCheck.IsChecked = _settings.ReducedMotion;
         ClockCheck.IsChecked = _settings.ShowClock;
+        SystemRailCheck.IsChecked = _settings.ShowSystemRailButton;
+        BluetoothRailCheck.IsChecked = _settings.ShowBluetoothRailButton;
+        WifiRailCheck.IsChecked = _settings.ShowWifiRailButton;
+        ApplyRailVisibility();
         StartupRegistration startup = StartupService.Read();
         StartWithWindowsCheck.IsChecked = startup.IsEnabled;
         StartWithWindowsCheck.IsEnabled = startup.IsAvailable;
@@ -434,12 +456,15 @@ public partial class MainWindow : Window
         LoadFeaturePreferences();
         _updating = false;
     }
-    private void SavePreferences()
+    private bool SavePreferences()
     {
         CaptureFocusState();
         CaptureFeaturePreferences();
         bool saved = SettingsStore.Save(_settings);
-        if (_ready) SettingsStatus.Text = saved ? "Saved locally. No account. No telemetry." : "Could not save preferences.";
+        if (_ready) SettingsStatus.Text = _settings.IsFutureSchema
+            ? "Settings were created by a newer Vajra Pulse version and were not overwritten."
+            : saved ? "Saved locally. No account. No telemetry." : "Could not save preferences.";
+        return saved;
     }
     private void PositionIsland()
     {
@@ -468,6 +493,12 @@ public partial class MainWindow : Window
         _userHidden = !_userHidden;
         if (_userHidden) Hide(); else { Show(); Collapse(); PositionIsland(); }
     }
+    private bool IsPointerOverInteractiveChrome() => Island.IsMouseOver || SideRail.IsMouseOver || SatelliteButton.IsMouseOver;
+    private void InteractiveChrome_MouseEnter(object sender, MouseEventArgs e) => _leave.Stop();
+    private void InteractiveChrome_MouseLeave(object sender, MouseEventArgs e)
+    {
+        if (!_pinned && _state.Mode == IslandMode.Expanded) { _leave.Stop(); _leave.Start(); }
+    }
     private void Island_MouseEnter(object sender, MouseEventArgs e)
     {
         _leave.Stop();
@@ -483,7 +514,7 @@ public partial class MainWindow : Window
     private void Settings_Click(object sender, RoutedEventArgs e) => OpenSettings();
     private void Island_RightClick(object sender, MouseButtonEventArgs e) { OpenSettings(); e.Handled = true; }
     private void Back_Click(object sender, RoutedEventArgs e) { FocusMinutes_LostFocus(sender, e); Expand(true); }
-    private void Window_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Escape) { Collapse(); e.Handled = true; } }
+    private void Window_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Escape) { if (_catalogOpen) CloseAppCatalog(); else Collapse(); e.Handled = true; } }
     private void Window_Deactivated(object? sender, EventArgs e)
     {
         if (_ready && _state.Mode != IslandMode.Compact) { _pinned = false; _leave.Start(); }
@@ -528,6 +559,15 @@ public partial class MainWindow : Window
         VolumeText.Text = $"{Math.Round(e.NewValue)}%";
     }
     private void Mute_Click(object sender, RoutedEventArgs e) { _audio.ToggleMute(); UpdateAudio(); }
+    private void ApplyRailVisibility()
+    {
+        SystemRailButton.Visibility = _settings.ShowSystemRailButton ? Visibility.Visible : Visibility.Collapsed;
+        BluetoothRailButton.Visibility = _settings.ShowBluetoothRailButton ? Visibility.Visible : Visibility.Collapsed;
+        WifiRailButton.Visibility = _settings.ShowWifiRailButton ? Visibility.Visible : Visibility.Collapsed;
+        SideRail.Visibility = _settings.ShowSystemRailButton || _settings.ShowBluetoothRailButton || _settings.ShowWifiRailButton
+            ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     private void Preferences_Changed(object sender, RoutedEventArgs e)
     {
         if (!_ready || _updating) return;
@@ -535,6 +575,10 @@ public partial class MainWindow : Window
         _settings.HideInFullscreen = FullscreenCheck.IsChecked == true;
         _settings.ReducedMotion = MotionCheck.IsChecked == true;
         _settings.ShowClock = ClockCheck.IsChecked == true;
+        _settings.ShowSystemRailButton = SystemRailCheck.IsChecked == true;
+        _settings.ShowBluetoothRailButton = BluetoothRailCheck.IsChecked == true;
+        _settings.ShowWifiRailButton = WifiRailCheck.IsChecked == true;
+        ApplyRailVisibility();
         SavePreferences(); ApplyMode();
     }
     private void Startup_Changed(object sender, RoutedEventArgs e)
@@ -572,7 +616,7 @@ public partial class MainWindow : Window
     }
     private void Test_Click(object sender, RoutedEventArgs e) => TestLiveState();
     private void Quit_Click(object sender, RoutedEventArgs e) => Quit();
-    private enum Activity { Music, Focus, Shelf, Calendar, Inbox }
+    private enum Activity { Music, Focus, Shelf, Calendar, Inbox, Tools }
     private void Quit() => Close();
     [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr hwnd);
     [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetWindowPos(IntPtr hwnd, IntPtr insertAfter, int x, int y, int width, int height, uint flags);

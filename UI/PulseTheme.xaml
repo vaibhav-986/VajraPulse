@@ -111,4 +111,21 @@
    </ControlTemplate>
   </Setter.Value></Setter>
  </Style>
+ <Style x:Key="RailButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
+  <Setter Property="Width" Value="32" /><Setter Property="Height" Value="32" /><Setter Property="MinHeight" Value="32" />
+  <Setter Property="Background" Value="{StaticResource IslandBrush}" /><Setter Property="Margin" Value="0,0,0,4" />
+ </Style>
+ <Style x:Key="ToolSelectorButton" TargetType="Button" BasedOn="{StaticResource GhostButton}">
+  <Setter Property="FontSize" Value="10" /><Setter Property="MinHeight" Value="26" /><Setter Property="Padding" Value="10,3" />
+ </Style>
+ <Style x:Key="PulseProgress" TargetType="ProgressBar">
+  <Setter Property="Height" Value="5" /><Setter Property="Foreground" Value="{StaticResource MintBrush}" />
+  <Setter Property="Background" Value="{StaticResource LineBrush}" />
+  <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ProgressBar">
+   <Grid Height="{TemplateBinding Height}"><Border Background="{TemplateBinding Background}" CornerRadius="3" />
+    <Border x:Name="PART_Track" />
+    <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" CornerRadius="3" HorizontalAlignment="Left" />
+   </Grid>
+  </ControlTemplate></Setter.Value></Setter>
+ </Style>
 </ResourceDictionary>

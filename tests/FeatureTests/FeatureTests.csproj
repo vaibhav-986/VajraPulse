@@ -3,6 +3,7 @@
  <ItemGroup>
   <Compile Include="..\..\Services\FileShelfService.cs" Link="FileShelfService.cs" />
   <Compile Include="..\..\Services\AudioService.cs" Link="AudioService.cs" />
+  <Compile Include="..\..\Services\CoreAudioInterop.cs" Link="CoreAudioInterop.cs" />
   <Compile Include="..\..\Services\BrightnessService.cs" Link="BrightnessService.cs" />
   <Compile Include="..\..\Services\MediaService.cs" Link="MediaService.cs" />
   <Compile Include="..\..\Services\NotificationListenerService.cs" Link="NotificationListenerService.cs" />
