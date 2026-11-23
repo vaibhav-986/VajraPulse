@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _leave = new() { Interval = TimeSpan.FromMilliseconds(800) };
     private TrayService? _tray;
     private HotkeyService? _hotkey;
+    private AppSlotHotkeyService? _appSlotHotkeys;
     private IntPtr _handle;
     private Rect _monitor;
     private bool _ready, _updating, _pinned, _userHidden, _closed;
@@ -46,6 +47,11 @@ public partial class MainWindow : Window
         _monitor = EnvironmentService.PrimaryScreenBounds();
         IsVisibleChanged += (_, _) => UpdatePlaybackAnimation();
         _hotkey = new HotkeyService(this, ToggleFromShortcut);
+        _appSlotHotkeys = new AppSlotHotkeyService(this, new Action<int>[]
+        {
+            i => LaunchSlotDirect(0), i => LaunchSlotDirect(1), i => LaunchSlotDirect(2),
+            i => LaunchSlotDirect(3), i => LaunchSlotDirect(4)
+        });
         SourceInitialized += (_, _) =>
         {
             _handle = new WindowInteropHelper(this).Handle;
@@ -90,7 +96,7 @@ public partial class MainWindow : Window
             ShutdownEyes();
             SavePreferences();
             DisposeFeatures();
-            _tray?.Dispose(); _hotkey?.Dispose(); _audio.Dispose(); _media.Dispose();
+            _tray?.Dispose(); _hotkey?.Dispose(); _appSlotHotkeys?.Dispose(); _audio.Dispose(); _media.Dispose();
             HwndSource.FromHwnd(_handle)?.RemoveHook(WindowHook);
             Application.Current.Shutdown();
         };

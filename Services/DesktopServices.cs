@@ -82,3 +82,54 @@ public sealed class HotkeyService : IDisposable
     [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool RegisterHotKey(IntPtr hwnd, int id, uint modifiers, uint key);
     [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool UnregisterHotKey(IntPtr hwnd, int id);
 }
+
+public sealed class AppSlotHotkeyService : IDisposable
+{
+    private const int BaseId = 0x5660;
+    private readonly Window _window;
+    private readonly Action<int>[] _launchers;
+    private HwndSource? _source;
+
+    public AppSlotHotkeyService(Window window, Action<int>[] launchers)
+    {
+        _window = window;
+        _launchers = launchers;
+        window.SourceInitialized += SourceInitialized;
+        if (new WindowInteropHelper(window).Handle != IntPtr.Zero) Register();
+    }
+    private void SourceInitialized(object? sender, EventArgs e) => Register();
+    private void Register()
+    {
+        if (_source != null) return;
+        _source = HwndSource.FromHwnd(new WindowInteropHelper(_window).Handle);
+        _source?.AddHook(Hook);
+        for (int i = 0; i < _launchers.Length; i++)
+            RegisterHotKey(_source.Handle, BaseId + i, 0x4003, (uint)(0x31 + i));
+    }
+    private IntPtr Hook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == 0x312)
+        {
+            int id = wParam.ToInt32();
+            if (id >= BaseId && id < BaseId + _launchers.Length)
+            {
+                _launchers[id - BaseId](id - BaseId);
+                handled = true;
+            }
+        }
+        return IntPtr.Zero;
+    }
+    public void Dispose()
+    {
+        _window.SourceInitialized -= SourceInitialized;
+        if (_source != null)
+        {
+            for (int i = 0; i < _launchers.Length; i++)
+                UnregisterHotKey(_source.Handle, BaseId + i);
+            _source.RemoveHook(Hook);
+            _source = null;
+        }
+    }
+    [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool RegisterHotKey(IntPtr hwnd, int id, uint modifiers, uint key);
+    [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool UnregisterHotKey(IntPtr hwnd, int id);
+}

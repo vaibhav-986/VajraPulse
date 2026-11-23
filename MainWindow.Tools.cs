@@ -240,6 +240,26 @@ public partial class MainWindow
         finally { _appLaunchBusy = false; }
     }
 
+    private async void LaunchSlotDirect(int index)
+    {
+        if (index < 0 || index >= _settings.LaunchSlots.Length || _appLaunchBusy) return;
+        AppLaunchSlotSettings slot = _settings.LaunchSlots[index];
+        AppLaunchResult validation = _appLauncher.Validate(slot);
+        if (!validation.IsSuccess)
+        {
+            Notify("Application could not open", validation.Message, 4);
+            return;
+        }
+        _appLaunchBusy = true;
+        try
+        {
+            AppLaunchResult result = await _appLauncher.LaunchAsync(slot);
+            if (result.IsSuccess) ReactHappy();
+            else Notify("Application could not open", result.Message, 4);
+        }
+        finally { _appLaunchBusy = false; }
+    }
+
     private async void LaunchSlotChoose_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: LaunchSlotItem item }) await OpenAppCatalogAsync(item);
