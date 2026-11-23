@@ -14,7 +14,7 @@ var tests = new (string Name, Action Run)[]
     ("Launcher routes explicit target kinds", TestLauncherKinds),
     ("Installed app catalog merges and filters", TestCatalogMergeAndFilter),
     ("Audio sessions group by application", TestAudioGrouping),
-    ("Version metadata is 1.2", TestVersionMetadata),
+    ("Version metadata is 1.3", TestVersionMetadata),
     ("Live telemetry is bounded", TestLiveTelemetry),
     ("Live Wi-Fi status is bounded", TestLiveWifi),
     ("Live audio enumeration is read-only", TestLiveAudio)
@@ -180,10 +180,10 @@ static void TestVersionMetadata()
     XDocument project = XDocument.Load(Path.Combine(root, "VajraPulse.csproj"));
     string? version = project.Descendants("Version").SingleOrDefault()?.Value;
     string? fileVersion = project.Descendants("FileVersion").SingleOrDefault()?.Value;
-    Assert(version == "1.2.0" && fileVersion == "1.2.0.0", "Project versions should be 1.2.");
+    Assert(version == "1.3.0" && fileVersion == "1.3.0.0", "Project versions should be 1.3.");
     XDocument package = XDocument.Load(Path.Combine(root, "packaging", "Package.appxmanifest"));
     XNamespace ns = "http://schemas.microsoft.com/appx/manifest/foundation/windows10";
-    Assert(package.Root?.Element(ns + "Identity")?.Attribute("Version")?.Value == "1.2.0.0", "MSIX version should be 1.2.0.0.");
+    Assert(package.Root?.Element(ns + "Identity")?.Attribute("Version")?.Value == "1.3.0.0", "MSIX version should be 1.3.0.0.");
 }
 
 static void TestLiveTelemetry()

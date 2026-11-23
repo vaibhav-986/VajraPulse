@@ -55,6 +55,7 @@ public partial class MainWindow : Window
         {
             _ready = true;
             PositionIsland();
+            InitializeEyes();
             await InitializeFeaturesAsync();
             if (_closed) return;
             LoadPreferences();
@@ -86,6 +87,7 @@ public partial class MainWindow : Window
         {
             _closed = true;
             _tick.Stop(); _hover.Stop(); _leave.Stop();
+            ShutdownEyes();
             SavePreferences();
             DisposeFeatures();
             _tray?.Dispose(); _hotkey?.Dispose(); _audio.Dispose(); _media.Dispose();
@@ -300,8 +302,9 @@ public partial class MainWindow : Window
         bool focus = _focus.IsRunning || _focus.IsPaused;
         bool mediaPresent = _media.Snapshot.HasSession;
         bool notice = _notice != null;
+        bool clock = !notice && !focus && !mediaPresent && _settings.ShowClock;
         CompactBadge.Visibility = notice || focus || mediaPresent ? Visibility.Visible : Visibility.Collapsed;
-        CompactLeftColumn.Width = new GridLength(notice || focus || mediaPresent ? 30 : 0);
+        CompactLeftColumn.Width = new GridLength(notice || focus || mediaPresent || clock ? 30 : 0);
         CompactBadge.Background = notice || focus ? Brushes.Transparent : (Brush)FindResource("PanelBrush");
         CompactArtwork.Visibility = !notice && !focus && mediaPresent && _media.Snapshot.Artwork != null ? Visibility.Visible : Visibility.Collapsed;
         CompactIcon.Visibility = CompactArtwork.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
@@ -310,9 +313,12 @@ public partial class MainWindow : Window
         PlaybackBars.Visibility = !notice && !focus && mediaPresent ? Visibility.Visible : Visibility.Collapsed;
         PlaybackBars.Opacity = _media.Snapshot.IsPlaying ? 1 : 0.45;
         System.Windows.Automation.AutomationProperties.SetName(PlaybackBars, _media.Snapshot.IsPlaying ? "Playback is active" : "Media is paused");
-        CompactTitle.HorizontalAlignment = notice ? HorizontalAlignment.Left : HorizontalAlignment.Center;
-        CompactTitle.Text = notice ? _notice! : !focus && !mediaPresent && _settings.ShowClock ? DateTime.Now.ToString("HH:mm") : "";
+        CompactRightColumn.Width = new GridLength(focus ? 40 : 24);
+        Grid.SetColumn(CompactTitle, notice ? 1 : clock ? 0 : 2);
+        CompactTitle.HorizontalAlignment = notice ? HorizontalAlignment.Left : clock ? HorizontalAlignment.Center : HorizontalAlignment.Right;
+        CompactTitle.Text = notice ? _notice! : clock ? DateTime.Now.ToString("HH:mm") : "";
         CompactStatus.Text = !notice && focus ? FormatTime(_focus.Remaining) : "";
+        EyeCluster.Visibility = notice ? Visibility.Collapsed : Visibility.Visible;
         CompactIcon.Text = notice ? "" : focus ? "" : "";
         bool live = notice && _liveKind != LiveKind.Text;
         CompactButton.Visibility = _state.Mode == IslandMode.Compact && !live ? Visibility.Visible : Visibility.Collapsed;
@@ -328,6 +334,7 @@ public partial class MainWindow : Window
         SatelliteButton.Visibility = _state.Mode == IslandMode.Compact && focus && mediaPresent && !notice ? Visibility.Visible : Visibility.Collapsed;
         UpdateActivity();
         UpdatePlaybackAnimation();
+        FlushEyeEmotion();
     }
 
     private void UpdatePlaybackAnimation()

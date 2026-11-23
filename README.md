@@ -1,8 +1,8 @@
 # Vajra Pulse
 
-**Version 1.2.0**
+**Version 1.3.0**
 
-A native Windows desktop island with a true-black compact pill, single-activity expansion, live Windows integrations, five app-launch slots, local system activity, and per-app audio mixing. No browser account, camera access, cloud service, or telemetry is required.
+A native Windows desktop island with a true-black compact pill, single-activity expansion, live Windows integrations, five app-launch slots, local system activity, per-app audio mixing, and cute googly eyes. No browser account, camera access, cloud service, or telemetry is required.
 
 ## Run
 
@@ -17,6 +17,7 @@ Double-click `Start-VajraPulse.cmd`. The ordinary app uses the installed .NET 8 
 - Hover to expand; move away to collapse a hover-opened island.
 - Click to keep it open while interacting; click away or press Escape to tuck it away.
 - Ctrl + Alt + Space expands/collapses or reveals the island.
+- The googly eyes follow your pointer, blink, and react when apps open or close.
 - Use the Music, Focus, Files, Calendar, Alerts, and Tools tabs for one activity at a time.
 - The optional side buttons open System tools, Bluetooth Settings, and Wi-Fi Settings; each can be shown or hidden independently in Settings.
 - Tools remains available from the expanded island and contains local CPU/memory/network activity, five app shortcuts, and the active-app volume mixer.
@@ -85,6 +86,10 @@ Real artwork, title, artist, and playback progress come from Windows media sessi
 
 Compact bars are a playing/paused indicator, not measured audio amplitude. Playback animations stop when hidden or when reduced motion is enabled.
 
+### Googly eyes
+
+The compact pill's eyes follow the pointer across the desktop, blink now and then, show closed happy eyes with a sparkle when an application window opens, and turn sad with a lowered gaze and a small tear when an application window closes. Reactions use only whether a titled application window appeared or disappeared; window titles, app content, and activity are not stored or sent anywhere. Animations follow the Reduce motion setting.
+
 ### Calendar and meeting reminders
 
 Choose **Calendar → Import .ics** and select an exported local calendar file. The next timed meeting appears with its local start/end time and a **Join meeting** button when it contains a valid HTTPS link. A reminder appears within 15 minutes of the next meeting. Importing does not sign into Google, Outlook, or any other service; re-import the export when it changes.
@@ -128,8 +133,9 @@ Preferences, side-button visibility, active focus state, shelf path references, 
 - `MainWindow.xaml` / `.xaml.cs`: layout, compact/expanded interaction, polling, and animation.
 - `MainWindow.Features.cs`: existing live states, shelf, seeking, brightness, calendar, and privacy flows.
 - `MainWindow.Tools.cs`: system telemetry, connectivity rail, app slots, and active-app mixer UI.
+- `MainWindow.Eyes.cs`: googly-eye pointer tracking, blinking, and app open/close reactions.
 - `Core/`: independent timer and island state logic.
-- `Services/SystemTelemetryService.cs`, `WifiStatusService.cs`, `InstalledAppCatalogService.cs`, `AppLauncherService.cs`, and `AudioSessionService.cs`: bounded Windows 1.2 integrations.
+- `Services/SystemTelemetryService.cs`, `WifiStatusService.cs`, `InstalledAppCatalogService.cs`, `AppLauncherService.cs`, and `AudioSessionService.cs`: bounded Windows 1.3 integrations.
 - `UI/PulseTheme.xaml`: native visual theme.
 - `tests/`: standalone regression and desktop smoke tests.
 - `packaging/`: optional notification-capable packaging and opt-in installation.

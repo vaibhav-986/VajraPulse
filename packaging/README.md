@@ -1,6 +1,6 @@
 # Optional Windows notification installation
 
-The prepared package manifest is version **1.2.0.0**, matching Vajra Pulse 1.2.0.
+The prepared package manifest is version **1.3.0.0**, matching Vajra Pulse 1.3.0.
 
 The ordinary `Start-VajraPulse.cmd` app works without package registration. Windows notification reading is OFF by default and requires both package identity and Windows consent. The listener does not request permission during normal startup.
 
