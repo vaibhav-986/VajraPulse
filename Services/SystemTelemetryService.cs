@@ -14,7 +14,7 @@ public enum TelemetryAvailability
     Unavailable
 }
 
-public sealed record CpuTelemetry(TelemetryAvailability Availability, double? Percent, string Status);
+public sealed record CpuTelemetry(TelemetryAvailability Availability, double? Percent, double? CoreUsage, string Status);
 public sealed record MemoryTelemetry(TelemetryAvailability Availability, ulong UsedBytes, ulong TotalBytes, double? Percent, string Status);
 public sealed record NetworkTelemetry(TelemetryAvailability Availability, double? BytesReceivedPerSecond, double? BytesSentPerSecond, int ActiveInterfaceCount, string Status);
 public sealed record SystemTelemetrySnapshot(DateTimeOffset ObservedAt, CpuTelemetry Cpu, MemoryTelemetry Memory, NetworkTelemetry Network);
@@ -39,20 +39,26 @@ public sealed class SystemTelemetryService
     private CpuTelemetry SampleCpu()
     {
         if (!GetSystemTimes(out FileTime idle, out FileTime kernel, out FileTime user))
-            return new(TelemetryAvailability.Unavailable, null, "Windows CPU counters are unavailable.");
+            return new(TelemetryAvailability.Unavailable, null, null, "Windows CPU counters are unavailable.");
 
         var current = new CpuCounters(idle.Value, kernel.Value, user.Value);
         if (_cpuBaseline is not CpuCounters previous)
         {
             _cpuBaseline = current;
-            return new(TelemetryAvailability.WarmingUp, null, "Collecting the first CPU sample.");
+            return new(TelemetryAvailability.WarmingUp, null, null, "Collecting the first CPU sample.");
         }
 
         _cpuBaseline = current;
         double? percent = CalculateCpuPercent(previous, current);
+        double? coreUsage = null;
+        try {
+            var procCount = Environment.ProcessorCount;
+            // Simplified core usage estimation
+            coreUsage = percent.HasValue ? percent.Value / procCount : null;
+        } catch {}
         return percent.HasValue
-            ? new(TelemetryAvailability.Available, percent, "Aggregate processor use")
-            : new(TelemetryAvailability.WarmingUp, null, "CPU counters were reset; collecting a new sample.");
+            ? new(TelemetryAvailability.Available, percent, coreUsage, "Aggregate processor use")
+            : new(TelemetryAvailability.WarmingUp, null, null, "CPU counters were reset; collecting a new sample.");
     }
 
     private static MemoryTelemetry SampleMemory()

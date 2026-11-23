@@ -5,7 +5,9 @@
  <SolidColorBrush x:Key="PanelHoverBrush" Color="#242424" />
  <SolidColorBrush x:Key="TextBrush" Color="#F5F5F7" />
  <SolidColorBrush x:Key="MutedBrush" Color="#8E8E93" />
- <SolidColorBrush x:Key="AccentBrush" Color="#F5F5F7" />
+  <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource CustomAccentColor}" />
+  <SolidColorBrush x:Key="DefaultAccentBrush" Color="#F5F5F7" />
+
  <SolidColorBrush x:Key="MintBrush" Color="#30D158" />
  <SolidColorBrush x:Key="TimerBrush" Color="#FF9F0A" />
  <SolidColorBrush x:Key="DangerBrush" Color="#FF453A" />
@@ -54,7 +56,8 @@
   <Setter Property="FontFamily" Value="Segoe Fluent Icons" /><Setter Property="FontSize" Value="15" />
  </Style>
  <Style x:Key="AccentButton" TargetType="Button" BasedOn="{StaticResource PulseButton}">
-  <Setter Property="Background" Value="{StaticResource AccentBrush}" /><Setter Property="Foreground" Value="#101016" /><Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Background" Value="{DynamicResource AccentBrush}" />
+<Setter Property="Foreground" Value="#101016" /><Setter Property="FontWeight" Value="SemiBold" />
  </Style>
  <Style x:Key="TrackButton" TargetType="RepeatButton">
   <Setter Property="Focusable" Value="False" />
@@ -65,7 +68,8 @@
   </Setter.Value></Setter>
  </Style>
  <Style x:Key="PulseSlider" TargetType="Slider">
-  <Setter Property="Foreground" Value="{StaticResource AccentBrush}" /><Setter Property="MinHeight" Value="28" />
+    <Setter Property="Foreground" Value="{DynamicResource AccentBrush}" />
+<Setter Property="MinHeight" Value="28" />
   <Setter Property="VerticalAlignment" Value="Center" /><Setter Property="IsMoveToPointEnabled" Value="True" />
   <Setter Property="Template"><Setter.Value>
    <ControlTemplate TargetType="Slider">
@@ -79,7 +83,7 @@
      </Track>
     </Border>
     <ControlTemplate.Triggers>
-     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="SliderChrome" Property="BorderBrush" Value="{StaticResource AccentBrush}" /></Trigger>
+     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="SliderChrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Trigger>
      <Trigger Property="IsEnabled" Value="False"><Setter TargetName="SliderChrome" Property="Opacity" Value="0.35" /></Trigger>
     </ControlTemplate.Triggers>
    </ControlTemplate>
@@ -105,7 +109,8 @@
       <Setter TargetName="SwitchDot" Property="Fill" Value="#101016" />
       <Setter TargetName="SwitchDot" Property="HorizontalAlignment" Value="Right" />
      </Trigger>
-     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="CheckChrome" Property="BorderBrush" Value="{StaticResource AccentBrush}" /></Trigger>
+      <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="CheckChrome" Property="BorderBrush" Value="{DynamicResource AccentBrush}" /></Trigger>
+
      <Trigger Property="IsEnabled" Value="False"><Setter TargetName="CheckChrome" Property="Opacity" Value="0.35" /></Trigger>
     </ControlTemplate.Triggers>
    </ControlTemplate>

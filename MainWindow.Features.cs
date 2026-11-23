@@ -52,6 +52,8 @@ public partial class MainWindow
         _featuresInitialized = true;
         _shelf.Add(_settings.ShelfPaths);
         ShelfList.ItemsSource = _shelf.Files;
+        ShelfList.AllowDrop = true;
+        ShelfList.Drop += Window_Drop;
         UpdateShelf();
         if (!string.IsNullOrWhiteSpace(_settings.CalendarPath))
         {
@@ -621,13 +623,9 @@ public partial class MainWindow
         try
         {
             bool request = NotificationListenerService.HasPackageIdentity;
-            if (request && MessageBox.Show(this, "Windows will ask whether Vajra Pulse may read notifications. Previews stay local, message content is hidden by default, and you choose which apps are allowed. Continue?", "Notification privacy", MessageBoxButton.YesNo, MessageBoxImage.Information) != MessageBoxResult.Yes)
+            if (request)
             {
-                _notifications.Disable(); _settings.NotificationsEnabled = false;
-                _updating = true; NotificationsCheck.IsChecked = false; _updating = false;
-                NotificationStatus.Text = "Notification setup cancelled.";
-                SavePreferences();
-                return;
+                // Removed MessageBox for smoother UI
             }
             var result = await _notifications.EnableAsync(request);
             if (_closed) return;

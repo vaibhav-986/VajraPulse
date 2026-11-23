@@ -24,7 +24,7 @@ public partial class MainWindow
     private EyeEmotion _pendingEmotion;
     private bool _eyesStarted, _appWatcherBusy;
 
-    private enum EyeEmotion { None, Happy, Sad }
+    private enum EyeEmotion { None, Happy, Sad, Dizzy, Sleepy, Confused }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct EyeCursorPoint

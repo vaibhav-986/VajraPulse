@@ -47,6 +47,7 @@ public sealed class PulseSettings
     public bool HideNotificationContent { get; set; } = true;
     public bool NotifyAllApps { get; set; }
     public string[] NotificationAppIds { get; set; } = Array.Empty<string>();
+    public string AccentColor { get; set; } = "#F5F5F7";
     public AppLaunchSlotSettings[] LaunchSlots { get; set; } = SettingsStore.CreateEmptyLaunchSlots();
 }
 

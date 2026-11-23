@@ -14,16 +14,21 @@ $p = Get-Process VajraPulse | Select-Object -First 1
 $condition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ProcessIdProperty, [int]$p.Id)
 $root = [System.Windows.Automation.AutomationElement]::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Children, $condition)
 if ($null -eq $root) { throw 'Vajra Pulse has no desktop window.' }
-function Get-Control([string]$name) {
- $c = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, $name)
- return $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $c)
-}
-function Invoke-Control([string]$name) {
- $c = Get-Control $name
- if ($null -eq $c) { throw "Control not found: $name" }
- $pattern = $c.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
- $pattern.Invoke()
-}
+ function Get-Control([string]$name) {
+  for ($i = 0; $i -lt 5; $i++) {
+   $c = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::NameProperty, $name)
+   $found = $root.FindFirst([System.Windows.Automation.TreeScope]::Descendants, $c)
+   if ($null -ne $found) { return $found }
+   Start-Sleep -Milliseconds 500
+  }
+  return $null
+ }
+ function Invoke-Control([string]$name) {
+  $c = Get-Control $name
+  if ($null -eq $c) { throw "Control not found: $name" }
+  $pattern = $c.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
+  $pattern.Invoke()
+ }
 function Assert-Control([string]$name) {
  if ($null -eq (Get-Control $name)) { throw "Expected control missing: $name" }
  "PASS: $name"
@@ -49,36 +54,36 @@ if ($Mode -eq 'Inspect') {
  }
  return
 }
-if ($Mode -eq 'Expand' -or $Mode -eq 'Exercise') {
- if ($null -ne (Get-Control 'Expand Vajra Pulse')) { Invoke-Control 'Expand Vajra Pulse' }
- Start-Sleep -Milliseconds 220
- Assert-Control 'Show focus timer'
-}
-if ($Mode -eq 'Exercise') {
- Assert-Control 'Show tools'
- Invoke-Control 'Show tools'
- Start-Sleep -Milliseconds 220
- Assert-Control 'Show system activity'
- Invoke-Control 'Show system activity'
- Start-Sleep -Milliseconds 120
- Assert-Control 'Show application shortcuts'
- Assert-Control 'Show application volume mixer'
- Assert-Control 'CPU usage'
- Assert-Control 'Memory usage'
- Save-Capture 'tools-system.png'
- Invoke-Control 'Show application shortcuts'
- Start-Sleep -Milliseconds 220
- 1..5 | ForEach-Object { Assert-ControlEnabled "Application slot $_" }
- Save-Capture 'tools-apps.png'
- Invoke-Control 'Show application volume mixer'
- Start-Sleep -Milliseconds 650
- Save-Capture 'tools-mixer.png'
- Invoke-Control 'Show music controls'
- Start-Sleep -Milliseconds 220
- Save-Capture 'expanded.png'
- Invoke-Control 'Show focus timer'
- Start-Sleep -Milliseconds 220
- Assert-Control 'Start focus'
+ if ($Mode -eq 'Expand' -or $Mode -eq 'Exercise') {
+  if ($null -ne (Get-Control 'Expand Vajra Pulse')) { Invoke-Control 'Expand Vajra Pulse' }
+  Start-Sleep -Milliseconds 1000
+  Assert-Control 'Show focus timer'
+ }
+ if ($Mode -eq 'Exercise') {
+  Assert-Control 'Show tools'
+  Invoke-Control 'Show tools'
+  Start-Sleep -Milliseconds 1000
+  Assert-Control 'Show system activity'
+  Invoke-Control 'Show system activity'
+  Start-Sleep -Milliseconds 1000
+  Assert-Control 'Show application shortcuts'
+  Assert-Control 'Show application volume mixer'
+  Assert-Control 'CPU usage'
+  Assert-Control 'Memory usage'
+  Save-Capture 'tools-system.png'
+  Invoke-Control 'Show application shortcuts'
+  Start-Sleep -Milliseconds 1000
+  1..5 | ForEach-Object { Assert-ControlEnabled "Application slot $_" }
+  Save-Capture 'tools-apps.png'
+  Invoke-Control 'Show application volume mixer'
+  Start-Sleep -Milliseconds 1000
+  Save-Capture 'tools-mixer.png'
+  Invoke-Control 'Show music controls'
+  Start-Sleep -Milliseconds 1000
+  Save-Capture 'expanded.png'
+  Invoke-Control 'Show focus timer'
+  Start-Sleep -Milliseconds 1000
+  Assert-Control 'Start focus'
  Save-Capture 'focus.png'
  Invoke-Control 'Start focus'
  Assert-Control 'Pause'

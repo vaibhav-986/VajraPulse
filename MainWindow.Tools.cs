@@ -80,7 +80,7 @@ public partial class MainWindow
         if (_closed) return;
 
         RenderMeter(CpuMeter, CpuValueText, snapshot.Cpu.Percent, snapshot.Cpu.Availability,
-            snapshot.Cpu.Percent.HasValue ? $"{snapshot.Cpu.Percent.Value:0}%" : snapshot.Cpu.Availability == TelemetryAvailability.WarmingUp ? "Warming up" : "Unavailable",
+            snapshot.Cpu.Percent.HasValue ? $"{snapshot.Cpu.Percent.Value:0}% (Core avg: {snapshot.Cpu.CoreUsage??0:0}%)" : snapshot.Cpu.Availability == TelemetryAvailability.WarmingUp ? "Warming up" : "Unavailable",
             "CPU usage");
 
         string memoryText = snapshot.Memory.Percent.HasValue

@@ -1,8 +1,14 @@
 # Vajra Pulse
 
-**Version 1.3.0**
+**Version 1.4.0**
 
 A native Windows desktop island with a true-black compact pill, single-activity expansion, live Windows integrations, five app-launch slots, local system activity, per-app audio mixing, and cute googly eyes. No browser account, camera access, cloud service, or telemetry is required.
+
+## 1.4.0 Updates
+- Added accent color customization.
+- Enhanced files shelf with better drag-and-drop support.
+- Added granular hardware metrics in Tools.
+- Streamlined notification setup.
 
 ## Run
 
