@@ -230,7 +230,8 @@ public partial class MainWindow
         try
         {
             AppLaunchResult result = await _appLauncher.LaunchAsync(slot);
-            if (!result.IsSuccess)
+            if (result.IsSuccess) ReactHappy();
+            else
             {
                 RefreshLaunchSlotItems();
                 Notify("Application could not open", result.Message, 4);

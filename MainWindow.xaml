@@ -37,25 +37,80 @@
     <Button x:Name="CompactButton" Style="{StaticResource GhostButton}" Padding="10,0" Click="Compact_Click"
      ToolTip="Vajra Pulse · Click to expand · Right-click for settings" AutomationProperties.Name="Expand Vajra Pulse">
      <Grid x:Name="CompactRow" Width="120">
-      <Grid.ColumnDefinitions><ColumnDefinition x:Name="CompactLeftColumn" Width="30" /><ColumnDefinition Width="*" /><ColumnDefinition Width="24" /></Grid.ColumnDefinitions>
-      <Border x:Name="CompactBadge" Width="24" Height="24" CornerRadius="6" VerticalAlignment="Center" HorizontalAlignment="Left" Background="#151515">
-       <Grid>
-        <TextBlock x:Name="CompactIcon" Text="&#xE8D6;" FontFamily="Segoe Fluent Icons" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" />
-        <Image x:Name="CompactArtwork" Stretch="UniformToFill"><Image.Clip><RectangleGeometry Rect="0,0,24,24" RadiusX="6" RadiusY="6" /></Image.Clip></Image>
+       <Grid.ColumnDefinitions><ColumnDefinition x:Name="CompactLeftColumn" Width="30" /><ColumnDefinition Width="*" /><ColumnDefinition x:Name="CompactRightColumn" Width="24" /></Grid.ColumnDefinitions>
+       <Border x:Name="CompactBadge" Width="24" Height="24" CornerRadius="6" VerticalAlignment="Center" HorizontalAlignment="Left" Background="#151515">
+        <Grid>
+         <TextBlock x:Name="CompactIcon" Text="&#xE8D6;" FontFamily="Segoe Fluent Icons" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" />
+         <Image x:Name="CompactArtwork" Stretch="UniformToFill"><Image.Clip><RectangleGeometry Rect="0,0,24,24" RadiusX="6" RadiusY="6" /></Image.Clip></Image>
+        </Grid>
+       </Border>
+       <TextBlock x:Name="CompactTitle" Grid.Column="0" FontSize="11" FontWeight="Medium" HorizontalAlignment="Center" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+       <TextBlock x:Name="CompactStatus" Grid.Column="2" FontSize="13" FontWeight="Medium" HorizontalAlignment="Right" VerticalAlignment="Center" />
+       <StackPanel x:Name="PlaybackBars" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" AutomationProperties.Name="Playback is active">
+        <Rectangle x:Name="Wave1" Width="2" Height="5" RadiusX="1" Fill="{StaticResource MintBrush}" Margin="0,0,2,0" />
+        <Rectangle x:Name="Wave2" Width="2" Height="12" RadiusX="1" Fill="{StaticResource MintBrush}" Margin="0,0,2,0" />
+        <Rectangle x:Name="Wave3" Width="2" Height="17" RadiusX="1" Fill="{StaticResource MintBrush}" Margin="0,0,2,0" />
+        <Rectangle x:Name="Wave4" Width="2" Height="8" RadiusX="1" Fill="{StaticResource MintBrush}" />
+       </StackPanel>
+       <Border x:Name="CameraLens" Grid.Column="2" Width="10" Height="10" CornerRadius="5" HorizontalAlignment="Right" VerticalAlignment="Center" BorderBrush="#121923" BorderThickness="1">
+        <Border.Background><RadialGradientBrush><GradientStop Color="#14223C" Offset="0" /><GradientStop Color="#07090E" Offset="1" /></RadialGradientBrush></Border.Background>
+        <Ellipse Width="2" Height="2" Fill="#314369" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2" />
+       </Border>
+       <Grid x:Name="EyeCluster" Grid.ColumnSpan="3" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
+        <Grid.RenderTransform><TranslateTransform x:Name="EyeClusterOffset" /></Grid.RenderTransform>
+        <StackPanel Orientation="Horizontal">
+         <Grid x:Name="LeftEye" Width="24" Height="24" Margin="2,0">
+          <Grid.RenderTransform><ScaleTransform x:Name="LeftEyeScale" CenterX="12" CenterY="12" /></Grid.RenderTransform>
+          <Ellipse Width="22" Height="22" Stroke="#17171B" StrokeThickness="1">
+           <Ellipse.Fill>
+            <RadialGradientBrush GradientOrigin="0.35,0.28" Center="0.42,0.36" RadiusX="0.8" RadiusY="0.8">
+             <GradientStop Color="#FFFFFF" Offset="0" />
+             <GradientStop Color="#F4F4F8" Offset="0.55" />
+             <GradientStop Color="#D9D9E3" Offset="1" />
+            </RadialGradientBrush>
+           </Ellipse.Fill>
+          </Ellipse>
+          <Grid x:Name="LeftPupil" Width="24" Height="24">
+           <Grid.RenderTransform><TranslateTransform x:Name="LeftPupilOffset" /></Grid.RenderTransform>
+           <Grid Width="11" Height="11" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Ellipse Fill="#16161B" />
+            <Ellipse Width="3.6" Height="3.6" Fill="White" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2.5,1.7,0,0" />
+            <Ellipse Width="1.5" Height="1.5" Fill="White" Opacity="0.7" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2,1.9" />
+           </Grid>
+          </Grid>
+          <Path x:Name="LeftHappyArc" Data="M5,15 Q12,5.5 19,15" Stroke="#17171B" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0" />
+          <Path x:Name="LeftSadBrow" Data="M4,8 L16,3" Stroke="#17171B" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,1,0,0" />
+          <Grid x:Name="LeftTear" Width="6" Height="9" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="1,0,0,-4" Opacity="0">
+           <Grid.RenderTransform><TranslateTransform x:Name="LeftTearOffset" /></Grid.RenderTransform>
+           <Path Data="M3,0 C4.4,2.4 5.6,4 5.6,5.6 A2.8,2.8 0 1 1 0.4,5.6 C0.4,4 1.6,2.4 3,0 Z" Fill="#A9DDFF" Stroke="#7FC3F0" StrokeThickness="0.5" />
+           <Ellipse Width="1.5" Height="1.5" Fill="White" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1.8,4" />
+          </Grid>
+         </Grid>
+         <Grid x:Name="RightEye" Width="24" Height="24" Margin="2,0">
+          <Grid.RenderTransform><ScaleTransform x:Name="RightEyeScale" CenterX="12" CenterY="12" /></Grid.RenderTransform>
+          <Ellipse Width="22" Height="22" Stroke="#17171B" StrokeThickness="1">
+           <Ellipse.Fill>
+            <RadialGradientBrush GradientOrigin="0.35,0.28" Center="0.42,0.36" RadiusX="0.8" RadiusY="0.8">
+             <GradientStop Color="#FFFFFF" Offset="0" />
+             <GradientStop Color="#F4F4F8" Offset="0.55" />
+             <GradientStop Color="#D9D9E3" Offset="1" />
+            </RadialGradientBrush>
+           </Ellipse.Fill>
+          </Ellipse>
+          <Grid x:Name="RightPupil" Width="24" Height="24">
+           <Grid.RenderTransform><TranslateTransform x:Name="RightPupilOffset" /></Grid.RenderTransform>
+           <Grid Width="11" Height="11" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <Ellipse Fill="#16161B" />
+            <Ellipse Width="3.6" Height="3.6" Fill="White" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2.5,1.7,0,0" />
+            <Ellipse Width="1.5" Height="1.5" Fill="White" Opacity="0.7" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2,1.9" />
+           </Grid>
+          </Grid>
+          <Path x:Name="RightHappyArc" Data="M5,15 Q12,5.5 19,15" Stroke="#17171B" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0" />
+          <Path x:Name="RightSadBrow" Data="M8,3 L20,8" Stroke="#17171B" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,1,0,0" />
+         </Grid>
+        </StackPanel>
+        <Path x:Name="HappySparkle" Data="M5,0 L6.2,3.8 L10,5 L6.2,6.2 L5,10 L3.8,6.2 L0,5 L3.8,3.8 Z" Fill="#FFE6A0" Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-5,-9,0" Opacity="0" />
        </Grid>
-      </Border>
-      <TextBlock x:Name="CompactTitle" Grid.Column="1" FontSize="11" FontWeight="Medium" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-      <TextBlock x:Name="CompactStatus" Grid.Column="1" FontSize="13" FontWeight="Medium" HorizontalAlignment="Right" VerticalAlignment="Center" />
-      <StackPanel x:Name="PlaybackBars" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" AutomationProperties.Name="Playback is active">
-       <Rectangle x:Name="Wave1" Width="2" Height="5" RadiusX="1" Fill="{StaticResource MintBrush}" Margin="0,0,2,0" />
-       <Rectangle x:Name="Wave2" Width="2" Height="12" RadiusX="1" Fill="{StaticResource MintBrush}" Margin="0,0,2,0" />
-       <Rectangle x:Name="Wave3" Width="2" Height="17" RadiusX="1" Fill="{StaticResource MintBrush}" Margin="0,0,2,0" />
-       <Rectangle x:Name="Wave4" Width="2" Height="8" RadiusX="1" Fill="{StaticResource MintBrush}" />
-      </StackPanel>
-      <Border x:Name="CameraLens" Grid.Column="2" Width="10" Height="10" CornerRadius="5" HorizontalAlignment="Right" VerticalAlignment="Center" BorderBrush="#121923" BorderThickness="1">
-       <Border.Background><RadialGradientBrush><GradientStop Color="#14223C" Offset="0" /><GradientStop Color="#07090E" Offset="1" /></RadialGradientBrush></Border.Background>
-       <Ellipse Width="2" Height="2" Fill="#314369" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2" />
-      </Border>
      </Grid>
     </Button>
     <Grid x:Name="LiveStatePanel" Visibility="Collapsed" Margin="14,0">
