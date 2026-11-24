@@ -84,8 +84,11 @@
            <Grid.RenderTransform><TranslateTransform x:Name="LeftTearOffset" /></Grid.RenderTransform>
            <Path Data="M3,0 C4.4,2.4 5.6,4 5.6,5.6 A2.8,2.8 0 1 1 0.4,5.6 C0.4,4 1.6,2.4 3,0 Z" Fill="#A9DDFF" Stroke="#7FC3F0" StrokeThickness="0.5" />
            <Ellipse Width="1.5" Height="1.5" Fill="White" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1.8,4" />
-          </Grid>
-         </Grid>
+      </Grid>
+      <Grid Grid.Row="3" Margin="20,0,20,0">
+       <TextBlock x:Name="BatteryText" FontSize="10" Text="Battery" Foreground="#75757A" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,0,0" />
+      </Grid>
+     </Grid>
          <Grid x:Name="RightEye" Width="24" Height="24" Margin="2,0">
           <Grid.RenderTransform><ScaleTransform x:Name="RightEyeScale" CenterX="12" CenterY="12" /></Grid.RenderTransform>
           <Ellipse Width="22" Height="22" Stroke="#17171B" StrokeThickness="1">
@@ -126,13 +129,21 @@
      </StackPanel>
     </Grid>
     <Grid x:Name="ExpandedPanel" Visibility="Collapsed" Opacity="0" Margin="20,14,20,12">
-     <Grid.RowDefinitions><RowDefinition Height="24" /><RowDefinition Height="6" /><RowDefinition x:Name="ExpandedContentRow" Height="122" /><RowDefinition Height="6" /><RowDefinition Height="24" /></Grid.RowDefinitions>
-     <Grid>
-      <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="28" /><ColumnDefinition Width="28" /></Grid.ColumnDefinitions>
-      <TextBlock x:Name="HeaderSubtitle" Text="Now playing" FontSize="11" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-      <Button Grid.Column="1" Style="{StaticResource IconButton}" Width="28" Height="28" MinHeight="28" Content="&#xE713;" Foreground="#68686D" Click="Settings_Click" ToolTip="Settings" AutomationProperties.Name="Open settings" />
-      <Button Grid.Column="2" Style="{StaticResource IconButton}" Width="28" Height="28" MinHeight="28" Content="&#xE70E;" Foreground="#68686D" Click="Collapse_Click" ToolTip="Collapse" AutomationProperties.Name="Collapse Vajra Pulse" />
-     </Grid>
+     <Grid.RowDefinitions><RowDefinition Height="24" /><RowDefinition Height="30" /><RowDefinition x:Name="ExpandedContentRow" Height="122" /><RowDefinition Height="24" /></Grid.RowDefinitions>
+      <Grid>
+       <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="28" /><ColumnDefinition Width="28" /></Grid.ColumnDefinitions>
+       <TextBlock x:Name="HeaderSubtitle" Text="Now playing" FontSize="11" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+       <Button Grid.Column="1" Style="{StaticResource IconButton}" Width="28" Height="28" MinHeight="28" Content="&#xE713;" Foreground="#68686D" Click="Settings_Click" ToolTip="Settings" AutomationProperties.Name="Open settings" />
+       <Button Grid.Column="2" Style="{StaticResource IconButton}" Width="28" Height="28" MinHeight="28" Content="&#xE70E;" Foreground="#68686D" Click="Collapse_Click" ToolTip="Collapse" AutomationProperties.Name="Collapse Vajra Pulse" />
+      </Grid>
+      <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,4,0,4">
+       <Button x:Name="MusicTab" Content="🎵" Style="{StaticResource GhostButton}" FontSize="14" MinHeight="24" Padding="4,0" Click="MusicTab_Click" AutomationProperties.Name="Show music controls" />
+       <Button x:Name="FocusTab" Content="⏲️" Style="{StaticResource GhostButton}" FontSize="14" MinHeight="24" Padding="4,0" Click="FocusTab_Click" AutomationProperties.Name="Show focus timer" />
+       <Button x:Name="FilesTab" Content="📂" Style="{StaticResource GhostButton}" FontSize="14" MinHeight="24" Padding="4,0" Click="FilesTab_Click" AutomationProperties.Name="Show file shelf" />
+       <Button x:Name="CalendarTab" Content="📅" Style="{StaticResource GhostButton}" FontSize="14" MinHeight="24" Padding="4,0" Click="CalendarTab_Click" AutomationProperties.Name="Show calendar" />
+       <Button x:Name="InboxTab" Content="🔔" Style="{StaticResource GhostButton}" FontSize="14" MinHeight="24" Padding="4,0" Click="InboxTab_Click" AutomationProperties.Name="Show notification previews" />
+       <Button x:Name="ToolsTab" Content="⚙️" Style="{StaticResource GhostButton}" FontSize="14" MinHeight="24" Padding="4,0" Click="ToolsTab_Click" AutomationProperties.Name="Show tools" />
+      </StackPanel>
      <Grid x:Name="MusicActivity" Grid.Row="2">
       <Grid.RowDefinitions><RowDefinition Height="56" /><RowDefinition Height="24" /><RowDefinition Height="42" /></Grid.RowDefinitions>
       <Grid>
@@ -246,18 +257,7 @@
        </ListBox>
       </Grid>
      </Grid>
-     <Grid Grid.Row="4">
-      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-       <Button x:Name="MusicTab" Content="Music" Style="{StaticResource GhostButton}" FontSize="10" MinHeight="24" Padding="0,0,8,0" Click="MusicTab_Click" AutomationProperties.Name="Show music controls" />
-       <TextBlock Text="·" Foreground="#48484D" VerticalAlignment="Center" />
-       <Button x:Name="FocusTab" Content="Focus" Style="{StaticResource GhostButton}" FontSize="10" MinHeight="24" Padding="8,0" Click="FocusTab_Click" AutomationProperties.Name="Show focus timer" />
-       <Button x:Name="FilesTab" Content="Files" Style="{StaticResource GhostButton}" FontSize="10" MinHeight="24" Padding="8,0" Click="FilesTab_Click" AutomationProperties.Name="Show file shelf" />
-       <Button x:Name="CalendarTab" Content="Calendar" Style="{StaticResource GhostButton}" FontSize="10" MinHeight="24" Padding="8,0" Click="CalendarTab_Click" AutomationProperties.Name="Show calendar" />
-       <Button x:Name="InboxTab" Content="Alerts" Style="{StaticResource GhostButton}" FontSize="10" MinHeight="24" Padding="7,0" Click="InboxTab_Click" AutomationProperties.Name="Show notification previews" />
-       <Button x:Name="ToolsTab" Content="Tools" Style="{StaticResource GhostButton}" FontSize="10" MinHeight="24" Padding="7,0" Click="ToolsTab_Click" AutomationProperties.Name="Show tools" />
-      </StackPanel>
-      <TextBlock x:Name="BatteryText" FontSize="10" Text="Battery" Foreground="#75757A" HorizontalAlignment="Right" VerticalAlignment="Center" />
-     </Grid>
+
     </Grid>
     <Grid x:Name="SettingsPanel" Visibility="Collapsed" Opacity="0" Margin="20,16,20,14">
      <Grid.RowDefinitions><RowDefinition Height="42" /><RowDefinition Height="*" /><RowDefinition Height="28" /></Grid.RowDefinitions>
@@ -265,9 +265,16 @@
       <StackPanel VerticalAlignment="Center"><TextBlock Text="Vajra Pulse" FontSize="17" FontWeight="SemiBold" /><TextBlock Text="Make it yours." FontSize="10" Foreground="{StaticResource MutedBrush}" /></StackPanel>
       <Button Style="{StaticResource IconButton}" Content="&#xE72B;" HorizontalAlignment="Right" Click="Back_Click" ToolTip="Back" AutomationProperties.Name="Back to island" />
      </Grid>
-     <ScrollViewer Grid.Row="1" Margin="0,12,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-     <StackPanel Margin="0,0,6,0">
-      <CheckBox x:Name="HoverCheck" Content="Expand on hover" Style="{StaticResource PulseCheckBox}" Click="Preferences_Changed" />
+      <ScrollViewer Grid.Row="1" Margin="0,12,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+       <StackPanel Margin="0,0,6,0">
+        <TextBlock Text="Appearance" Style="{StaticResource SectionLabel}" Margin="0,0,0,6" />
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+          <Button Content="Light" Style="{StaticResource PulseButton}" Width="60" Margin="0,0,6,0" Click="LightTheme_Click" />
+          <Button Content="Dark" Style="{StaticResource PulseButton}" Width="60" Margin="0,0,6,0" Click="DarkTheme_Click" />
+          <Button Content="Glassy" Style="{StaticResource PulseButton}" Width="60" Click="GlassTheme_Click" />
+        </StackPanel>
+        <CheckBox x:Name="HoverCheck" Content="Expand on hover" Style="{StaticResource PulseCheckBox}" Click="Preferences_Changed" />
+
       <CheckBox x:Name="FullscreenCheck" Content="Hide over fullscreen apps" Style="{StaticResource PulseCheckBox}" Click="Preferences_Changed" />
       <CheckBox x:Name="MotionCheck" Content="Reduce motion" Style="{StaticResource PulseCheckBox}" Click="Preferences_Changed" />
       <CheckBox x:Name="ClockCheck" Content="Show clock when idle" Style="{StaticResource PulseCheckBox}" Click="Preferences_Changed" />

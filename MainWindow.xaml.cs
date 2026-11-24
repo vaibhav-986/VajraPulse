@@ -371,7 +371,7 @@ public partial class MainWindow : Window
         }
         bool tools = _activity == Activity.Tools;
         ExpandedContentRow.Height = new GridLength(tools ? 242 : 122);
-        ResizeIsland(366, tools ? 330 : 210);
+        ResizeIsland(400, tools ? 430 : 310);
     }
 
     private void ResizeIsland(double width, double height)
@@ -631,6 +631,18 @@ public partial class MainWindow : Window
     private void Quit_Click(object sender, RoutedEventArgs e) => Quit();
     private enum Activity { Music, Focus, Shelf, Calendar, Inbox, Tools }
     private void Quit() => Close();
+
+    private void SetTheme(string theme)
+    {
+        ResourceDictionary newTheme = new ResourceDictionary { Source = new Uri($"UI/{theme}Theme.xaml", UriKind.Relative) };
+        Application.Current.Resources.MergedDictionaries.Remove(Application.Current.Resources.MergedDictionaries.FirstOrDefault(d => d.Source != null && d.Source.ToString().EndsWith("Theme.xaml")));
+        Application.Current.Resources.MergedDictionaries.Add(newTheme);
+    }
+    
+    private void DarkTheme_Click(object sender, RoutedEventArgs e) => SetTheme("Dark");
+    private void LightTheme_Click(object sender, RoutedEventArgs e) => SetTheme("Light");
+    private void GlassTheme_Click(object sender, RoutedEventArgs e) => SetTheme("Glass");
+    
     [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr hwnd);
     [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetWindowPos(IntPtr hwnd, IntPtr insertAfter, int x, int y, int width, int height, uint flags);
 }
