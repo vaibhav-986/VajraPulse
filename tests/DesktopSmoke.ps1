@@ -1,6 +1,6 @@
 param([ValidateSet('Inspect','Expand','Exercise','Capture','Collapse')][string]$Mode = 'Inspect')
 $ErrorActionPreference = 'Stop'
-Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing
+Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes, System.Drawing, System.Windows.Forms
 Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
@@ -12,7 +12,14 @@ public static class PulseTestNative {
 [void][PulseTestNative]::SetProcessDpiAwarenessContext([IntPtr](-4))
 $p = Get-Process VajraPulse | Select-Object -First 1
 $condition = New-Object System.Windows.Automation.PropertyCondition([System.Windows.Automation.AutomationElement]::ProcessIdProperty, [int]$p.Id)
-$root = [System.Windows.Automation.AutomationElement]::RootElement.FindFirst([System.Windows.Automation.TreeScope]::Children, $condition)
+$windows = [System.Windows.Automation.AutomationElement]::RootElement.FindAll([System.Windows.Automation.TreeScope]::Children, $condition)
+$root = $null
+$largestArea = -1
+foreach ($candidate in $windows) {
+ $bounds = $candidate.Current.BoundingRectangle
+ $area = $bounds.Width * $bounds.Height
+ if ($area -gt $largestArea) { $largestArea = $area; $root = $candidate }
+}
 if ($null -eq $root) { throw 'Vajra Pulse has no desktop window.' }
  function Get-Control([string]$name) {
   for ($i = 0; $i -lt 5; $i++) {
@@ -23,11 +30,30 @@ if ($null -eq $root) { throw 'Vajra Pulse has no desktop window.' }
   }
   return $null
  }
+ function Keep-PointerOnIsland {
+  $r = $root.Current.BoundingRectangle
+  [System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point([int]($r.Left + $r.Width / 2), [int]($r.Top + 24))
+ }
  function Invoke-Control([string]$name) {
   $c = Get-Control $name
   if ($null -eq $c) { throw "Control not found: $name" }
-  $pattern = $c.GetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern)
-  $pattern.Invoke()
+  $pattern = $null
+  if ($c.TryGetCurrentPattern([System.Windows.Automation.InvokePattern]::Pattern, [ref]$pattern)) {
+   ([System.Windows.Automation.InvokePattern]$pattern).Invoke()
+   Keep-PointerOnIsland
+   return
+  }
+  if ($c.TryGetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern, [ref]$pattern)) {
+   ([System.Windows.Automation.SelectionItemPattern]$pattern).Select()
+   Keep-PointerOnIsland
+   return
+  }
+  if ($c.TryGetCurrentPattern([System.Windows.Automation.TogglePattern]::Pattern, [ref]$pattern)) {
+   ([System.Windows.Automation.TogglePattern]$pattern).Toggle()
+   Keep-PointerOnIsland
+   return
+  }
+  throw "Control has no invokable UI Automation pattern: $name"
  }
 function Assert-Control([string]$name) {
  if ($null -eq (Get-Control $name)) { throw "Expected control missing: $name" }

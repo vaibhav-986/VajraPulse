@@ -1,0 +1,19 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+ <LinearGradientBrush x:Key="IslandBrush" StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#FF100D18" Offset="0" /><GradientStop Color="#FF1D142A" Offset="1" /></LinearGradientBrush>
+ <SolidColorBrush x:Key="PanelBrush" Color="#FF2A1F38" />
+ <SolidColorBrush x:Key="PanelHoverBrush" Color="#FF3A2B4D" />
+ <SolidColorBrush x:Key="TextBrush" Color="#FFFFF8FC" />
+ <SolidColorBrush x:Key="MutedBrush" Color="#FFC9B9CF" />
+ <SolidColorBrush x:Key="AccentBrush" Color="#FFFF78B7" />
+ <SolidColorBrush x:Key="OnAccentBrush" Color="#FF24101C" />
+ <SolidColorBrush x:Key="MintBrush" Color="#FF66E3A4" />
+ <SolidColorBrush x:Key="TimerBrush" Color="#FFFFBE5C" />
+ <SolidColorBrush x:Key="DangerBrush" Color="#FFFF6577" />
+ <SolidColorBrush x:Key="LineBrush" Color="#FF443451" />
+ <SolidColorBrush x:Key="FocusRingBrush" Color="#FFFFA7CE" />
+ <SolidColorBrush x:Key="IslandBorderBrush" Color="#88FF9FCC" />
+ <SolidColorBrush x:Key="ArtworkDominantBrush" Color="#FFFF78B7" />
+ <SolidColorBrush x:Key="ArtworkMutedBrush" Color="#FFC49AB8" />
+ <DropShadowEffect x:Key="IslandEffect" Color="#9B356F" BlurRadius="18" ShadowDepth="2" Opacity="0.38" />
+</ResourceDictionary>

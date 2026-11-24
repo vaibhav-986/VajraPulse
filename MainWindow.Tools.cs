@@ -143,6 +143,7 @@ public partial class MainWindow
 
     private void ToolsTab_Click(object sender, RoutedEventArgs e)
     {
+        if (_updatingActivityTabs) return;
         SetActivity(Activity.Tools);
         SetToolSection(_toolSection);
     }

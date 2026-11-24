@@ -9,6 +9,30 @@ public partial class App : Application
 {
     private Mutex? _instance;
 
+    public string CurrentVisualMode { get; private set; } = "Cute";
+
+    public void ApplyVisualMode(string requestedMode)
+    {
+        string mode = requestedMode is "Glass" or "Neon" ? requestedMode : "Cute";
+        var replacement = new ResourceDictionary { Source = new Uri($"UI/{mode}Theme.xaml", UriKind.Relative) };
+        var dictionaries = Resources.MergedDictionaries;
+        int existingIndex = -1;
+        for (int index = 0; index < dictionaries.Count; index++)
+        {
+            string file = dictionaries[index].Source?.OriginalString.Replace('\\', '/') ?? "";
+            if (file.EndsWith("/CuteTheme.xaml", StringComparison.OrdinalIgnoreCase)
+                || file.EndsWith("/GlassTheme.xaml", StringComparison.OrdinalIgnoreCase)
+                || file.EndsWith("/NeonTheme.xaml", StringComparison.OrdinalIgnoreCase))
+            {
+                existingIndex = index;
+                break;
+            }
+        }
+        if (existingIndex >= 0) dictionaries[existingIndex] = replacement;
+        else dictionaries.Insert(0, replacement);
+        CurrentVisualMode = mode;
+    }
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);

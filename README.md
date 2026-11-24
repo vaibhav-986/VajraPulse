@@ -1,14 +1,15 @@
 # Vajra Pulse
 
-**Version 1.4.0**
+**Version 1.6.0**
 
 A native Windows desktop island with a true-black compact pill, single-activity expansion, live Windows integrations, five app-launch slots, local system activity, per-app audio mixing, and cute googly eyes. No browser account, camera access, cloud service, or telemetry is required.
 
-## 1.4.0 Updates
-- Added accent color customization.
-- Enhanced files shelf with better drag-and-drop support.
-- Added granular hardware metrics in Tools.
-- Streamlined notification setup.
+## 1.6.0 Updates
+- Added Cute Companion, simulated Glass, and Neon Pulse design modes.
+- Added locally saved Googly, Kawaii, and Starry eye styles.
+- Added top-left, top-center, and top-right docking with idle auto-retreat and edge reveal.
+- Music artwork can now accent the music timeline, playback bars, and compact media-progress ring.
+- Refined eye reactions, compact progress visuals, and settings persistence.
 
 ## Run
 
@@ -21,8 +22,11 @@ Double-click `Start-VajraPulse.cmd`. The ordinary app uses the installed .NET 8 
 ## Controls
 
 - Hover to expand; move away to collapse a hover-opened island.
+- After a short idle delay, the compact island retreats completely. Move the pointer to its selected top-left, top-center, or top-right screen-edge zone to reveal it again.
 - Click to keep it open while interacting; click away or press Escape to tuck it away.
 - Ctrl + Alt + Space expands/collapses or reveals the island.
+- Choose Cute Companion, simulated Glass, or Neon Pulse design mode in Settings. Three locally saved eye styles—Googly, Kawaii, and Starry—remain available in every mode.
+- Music artwork can color only the music timeline, playback bars, and compact media-progress ring; extracted colors remain in memory and are never uploaded or persisted.
 - The googly eyes follow your pointer, blink, and react when apps open or close.
 - Use the Music, Focus, Files, Calendar, Alerts, and Tools tabs for one activity at a time.
 - The optional side buttons open System tools, Bluetooth Settings, and Wi-Fi Settings; each can be shown or hidden independently in Settings.
@@ -132,11 +136,12 @@ The advanced desktop test uses clearly labeled temporary fixtures, imports and c
 
 ## Storage and limits
 
-Preferences, side-button visibility, active focus state, shelf path references, the selected calendar file path, and five selected app references are stored in `%LOCALAPPDATA%\VajraPulse\settings.json`. CPU, memory, network, Wi-Fi, Bluetooth, launch history, audio-session state, and notification bodies are not persisted. A runtime crash report, if needed, is written to `last-error.txt`. Display selection does not survive restart. The decorative lens never opens the camera. This app does not mirror phone calls or phone activity.
+Preferences, visual mode, eye style, dock position, artwork-accent preference, side-button visibility, active focus state, shelf path references, the selected calendar file path, and five selected app references are stored in `%LOCALAPPDATA%\VajraPulse\settings.json`. Extracted artwork colors, CPU, memory, network, Wi-Fi, Bluetooth, launch history, audio-session state, and notification bodies are not persisted. A runtime crash report, if needed, is written to `last-error.txt`. Display selection does not survive restart. The decorative lens never opens the camera. This app does not mirror phone calls or phone activity.
 
 ## Source
 
 - `MainWindow.xaml` / `.xaml.cs`: layout, compact/expanded interaction, polling, and animation.
+- `MainWindow.Design.cs`: visual-mode selection, docking, artwork accents, and compact progress visuals.
 - `MainWindow.Features.cs`: existing live states, shelf, seeking, brightness, calendar, and privacy flows.
 - `MainWindow.Tools.cs`: system telemetry, connectivity rail, app slots, and active-app mixer UI.
 - `MainWindow.Eyes.cs`: googly-eye pointer tracking, blinking, and app open/close reactions.

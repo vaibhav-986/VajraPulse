@@ -4,9 +4,8 @@
  ShutdownMode="OnExplicitShutdown">
   <Application.Resources>
   <ResourceDictionary>
-   <Color x:Key="CustomAccentColor">#F5F5F7</Color>
    <ResourceDictionary.MergedDictionaries>
-    <ResourceDictionary Source="UI/DarkTheme.xaml" />
+    <ResourceDictionary Source="UI/CuteTheme.xaml" />
     <ResourceDictionary Source="UI/PulseTheme.xaml" />
    </ResourceDictionary.MergedDictionaries>
   </ResourceDictionary>

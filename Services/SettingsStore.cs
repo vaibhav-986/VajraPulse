@@ -13,6 +13,13 @@ public enum AppLaunchTargetKind
     AppUserModelId
 }
 
+public enum IslandDockPosition
+{
+    TopCenter = 0,
+    TopLeft = 1,
+    TopRight = 2
+}
+
 public sealed class AppLaunchSlotSettings
 {
     public string DisplayName { get; set; } = "";
@@ -48,12 +55,16 @@ public sealed class PulseSettings
     public bool NotifyAllApps { get; set; }
     public string[] NotificationAppIds { get; set; } = Array.Empty<string>();
     public string AccentColor { get; set; } = "#F5F5F7";
+    public string EyeStyle { get; set; } = "Googly";
+    public string VisualMode { get; set; } = "Cute";
+    public IslandDockPosition DockPosition { get; set; } = IslandDockPosition.TopCenter;
+    public bool UseArtworkAccent { get; set; } = true;
     public AppLaunchSlotSettings[] LaunchSlots { get; set; } = SettingsStore.CreateEmptyLaunchSlots();
 }
 
 public static class SettingsStore
 {
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
     public const int LaunchSlotCount = 5;
     public static string SettingsPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VajraPulse", "settings.json");
 
@@ -132,6 +143,9 @@ public static class SettingsStore
             if (!s.FocusTimerRunning) s.FocusDeadlineUtc = null;
         }
         s.MeetingReminderMinutes = Math.Clamp(s.MeetingReminderMinutes, 1, 60);
+        s.EyeStyle = s.EyeStyle is "Googly" or "Kawaii" or "Starry" ? s.EyeStyle : "Googly";
+        s.VisualMode = s.VisualMode is "Cute" or "Glass" or "Neon" ? s.VisualMode : "Cute";
+        if (!Enum.IsDefined(s.DockPosition)) s.DockPosition = IslandDockPosition.TopCenter;
         s.CalendarPath = s.CalendarPath is { Length: <= 4096 } ? s.CalendarPath : "";
         s.ShelfPaths = (s.ShelfPaths ?? Array.Empty<string>()).Where(p => !string.IsNullOrWhiteSpace(p) && p.Length <= 4096).Distinct(StringComparer.OrdinalIgnoreCase).Take(30).ToArray();
         s.NotificationAppIds = (s.NotificationAppIds ?? Array.Empty<string>()).Where(p => !string.IsNullOrWhiteSpace(p) && p.Length <= 512).Distinct(StringComparer.Ordinal).Take(50).ToArray();

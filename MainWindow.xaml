@@ -1,14 +1,15 @@
 <Window x:Class="VajraPulse.MainWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
- Title="Vajra Pulse" Width="480" Height="440" WindowStyle="None"
+ Title="Vajra Pulse" Width="560" Height="440" WindowStyle="None"
  ResizeMode="NoResize" AllowsTransparency="True" Background="Transparent"
  Topmost="True" ShowInTaskbar="False" ShowActivated="False"
- FontFamily="Segoe UI Variable" Foreground="{StaticResource TextBrush}" AllowDrop="True"
+ FontFamily="Segoe UI Variable" Foreground="{DynamicResource TextBrush}" AllowDrop="True"
  PreviewDragEnter="Window_DragEnter" PreviewDragOver="Window_DragOver" PreviewDrop="Window_Drop" DragLeave="Window_DragLeave"
  UseLayoutRounding="True" SnapsToDevicePixels="True"
  KeyDown="Window_KeyDown" Deactivated="Window_Deactivated">
- <Grid>
+ <Grid x:Name="WindowChrome">
+  <Grid.RenderTransform><TranslateTransform x:Name="WindowChromeOffset" /></Grid.RenderTransform>
   <StackPanel x:Name="SideRail" Width="32" Margin="0,8,0,0" VerticalAlignment="Top" HorizontalAlignment="Center"
    MouseEnter="InteractiveChrome_MouseEnter" MouseLeave="InteractiveChrome_MouseLeave">
    <StackPanel.RenderTransform><TranslateTransform x:Name="SideRailPosition" X="104" /></StackPanel.RenderTransform>
@@ -21,7 +22,7 @@
   </StackPanel>
   <Button x:Name="SatelliteButton" Width="34" Height="36" Margin="0,8,0,0"
    VerticalAlignment="Top" HorizontalAlignment="Center" Visibility="Collapsed"
-   Style="{StaticResource GhostButton}" Background="Black" Padding="5,0"
+   Style="{StaticResource GhostButton}" Background="{DynamicResource IslandBrush}" Padding="5,0"
    Click="Satellite_Click" ToolTip="Open music" AutomationProperties.Name="Open secondary music activity">
    <Button.RenderTransform><TranslateTransform x:Name="SatellitePosition" X="110" /></Button.RenderTransform>
    <Grid Width="24" Height="24">
@@ -30,15 +31,16 @@
    </Grid>
   </Button>
   <Border x:Name="Island" Width="140" Height="36" VerticalAlignment="Top" HorizontalAlignment="Center"
-   Margin="0,8,0,0" Background="{StaticResource IslandBrush}" CornerRadius="24" ClipToBounds="True"
+   Margin="0,8,0,0" Background="{DynamicResource IslandBrush}" BorderBrush="{DynamicResource IslandBorderBrush}" BorderThickness="1" CornerRadius="24" ClipToBounds="True"
+   Effect="{DynamicResource IslandEffect}"
    MouseEnter="Island_MouseEnter" MouseLeave="Island_MouseLeave" MouseRightButtonUp="Island_RightClick">
-   <Border.Effect><DropShadowEffect Color="#000000" BlurRadius="14" ShadowDepth="2" Opacity="0.25" /></Border.Effect>
    <Grid>
     <Button x:Name="CompactButton" Style="{StaticResource GhostButton}" Padding="10,0" Click="Compact_Click"
+     PreviewMouseLeftButtonDown="Compact_PreviewLeftDown" PreviewMouseRightButtonDown="Compact_PreviewRightDown"
      ToolTip="Vajra Pulse · Click to expand · Right-click for settings" AutomationProperties.Name="Expand Vajra Pulse">
      <Grid x:Name="CompactRow" Width="120">
        <Grid.ColumnDefinitions><ColumnDefinition x:Name="CompactLeftColumn" Width="30" /><ColumnDefinition Width="*" /><ColumnDefinition x:Name="CompactRightColumn" Width="24" /></Grid.ColumnDefinitions>
-       <Border x:Name="CompactBadge" Width="24" Height="24" CornerRadius="6" VerticalAlignment="Center" HorizontalAlignment="Left" Background="#151515">
+       <Border x:Name="CompactBadge" Width="24" Height="24" CornerRadius="6" VerticalAlignment="Center" HorizontalAlignment="Left" Background="{DynamicResource PanelBrush}">
         <Grid>
          <TextBlock x:Name="CompactIcon" Text="&#xE8D6;" FontFamily="Segoe Fluent Icons" FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" />
          <Image x:Name="CompactArtwork" Stretch="UniformToFill"><Image.Clip><RectangleGeometry Rect="0,0,24,24" RadiusX="6" RadiusY="6" /></Image.Clip></Image>
@@ -47,21 +49,22 @@
        <TextBlock x:Name="CompactTitle" Grid.Column="0" FontSize="11" FontWeight="Medium" HorizontalAlignment="Center" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
        <TextBlock x:Name="CompactStatus" Grid.Column="2" FontSize="13" FontWeight="Medium" HorizontalAlignment="Right" VerticalAlignment="Center" />
        <StackPanel x:Name="PlaybackBars" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" AutomationProperties.Name="Playback is active">
-        <Rectangle x:Name="Wave1" Width="2" Height="5" RadiusX="1" Fill="{StaticResource MintBrush}" Margin="0,0,2,0" />
-        <Rectangle x:Name="Wave2" Width="2" Height="12" RadiusX="1" Fill="{StaticResource MintBrush}" Margin="0,0,2,0" />
-        <Rectangle x:Name="Wave3" Width="2" Height="17" RadiusX="1" Fill="{StaticResource MintBrush}" Margin="0,0,2,0" />
-        <Rectangle x:Name="Wave4" Width="2" Height="8" RadiusX="1" Fill="{StaticResource MintBrush}" />
+        <Rectangle x:Name="Wave1" Width="2" Height="5" RadiusX="1" Fill="{DynamicResource ArtworkDominantBrush}" Margin="0,0,2,0" />
+        <Rectangle x:Name="Wave2" Width="2" Height="12" RadiusX="1" Fill="{DynamicResource ArtworkMutedBrush}" Margin="0,0,2,0" />
+        <Rectangle x:Name="Wave3" Width="2" Height="17" RadiusX="1" Fill="{DynamicResource ArtworkDominantBrush}" Margin="0,0,2,0" />
+        <Rectangle x:Name="Wave4" Width="2" Height="8" RadiusX="1" Fill="{DynamicResource ArtworkMutedBrush}" />
        </StackPanel>
        <Border x:Name="CameraLens" Grid.Column="2" Width="10" Height="10" CornerRadius="5" HorizontalAlignment="Right" VerticalAlignment="Center" BorderBrush="#121923" BorderThickness="1">
         <Border.Background><RadialGradientBrush><GradientStop Color="#14223C" Offset="0" /><GradientStop Color="#07090E" Offset="1" /></RadialGradientBrush></Border.Background>
         <Ellipse Width="2" Height="2" Fill="#314369" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2" />
        </Border>
+       <Path x:Name="CompactProgressArc" Grid.ColumnSpan="3" Width="74" Height="34" Stroke="{DynamicResource ArtworkDominantBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" IsHitTestVisible="False" />
        <Grid x:Name="EyeCluster" Grid.ColumnSpan="3" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
         <Grid.RenderTransform><TranslateTransform x:Name="EyeClusterOffset" /></Grid.RenderTransform>
         <StackPanel Orientation="Horizontal">
          <Grid x:Name="LeftEye" Width="24" Height="24" Margin="2,0">
           <Grid.RenderTransform><ScaleTransform x:Name="LeftEyeScale" CenterX="12" CenterY="12" /></Grid.RenderTransform>
-          <Ellipse Width="22" Height="22" Stroke="#17171B" StrokeThickness="1">
+          <Ellipse x:Name="LeftEyeWhite" Width="22" Height="22" Stroke="#17171B" StrokeThickness="1">
            <Ellipse.Fill>
             <RadialGradientBrush GradientOrigin="0.35,0.28" Center="0.42,0.36" RadiusX="0.8" RadiusY="0.8">
              <GradientStop Color="#FFFFFF" Offset="0" />
@@ -71,13 +74,17 @@
            </Ellipse.Fill>
           </Ellipse>
           <Grid x:Name="LeftPupil" Width="24" Height="24">
-           <Grid.RenderTransform><TranslateTransform x:Name="LeftPupilOffset" /></Grid.RenderTransform>
-           <Grid Width="11" Height="11" HorizontalAlignment="Center" VerticalAlignment="Center">
+           <Grid.RenderTransform><TransformGroup><ScaleTransform x:Name="LeftPupilScale" CenterX="12" CenterY="12" /><TranslateTransform x:Name="LeftPupilOffset" /></TransformGroup></Grid.RenderTransform>
+           <Grid x:Name="LeftRoundPupilVisual" Width="11" Height="11" HorizontalAlignment="Center" VerticalAlignment="Center">
             <Ellipse Fill="#16161B" />
             <Ellipse Width="3.6" Height="3.6" Fill="White" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2.5,1.7,0,0" />
             <Ellipse Width="1.5" Height="1.5" Fill="White" Opacity="0.7" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2,1.9" />
            </Grid>
+           <Path x:Name="LeftStarPupilVisual" Data="M6,0 L7.5,4.1 L12,4.3 L8.5,7.1 L9.7,11.5 L6,9 L2.3,11.5 L3.5,7.1 L0,4.3 L4.5,4.1 Z" Width="12" Height="12" Stretch="Fill" Fill="#FFD54A" Stroke="#9A6500" StrokeThickness="0.6" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+           <Path x:Name="LeftHeartPupilVisual" Data="M6,11 C4.8,9.4 0.5,6.6 0.5,3.5 C0.5,1.5 2,0.3 3.7,0.3 C4.8,0.3 5.6,1 6,1.8 C6.4,1 7.2,0.3 8.3,0.3 C10,0.3 11.5,1.5 11.5,3.5 C11.5,6.6 7.2,9.4 6,11 Z" Width="12" Height="12" Stretch="Fill" Fill="#FF5F93" Stroke="#A91F55" StrokeThickness="0.5" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0" />
           </Grid>
+          <Path x:Name="LeftSleepyLid" Data="M4,11 Q12,17 20,11" Stroke="#17171B" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0" />
+          <Path x:Name="LeftCuriousBrow" Data="M5,5 Q12,1 19,5" Stroke="#17171B" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0" />
           <Path x:Name="LeftHappyArc" Data="M5,15 Q12,5.5 19,15" Stroke="#17171B" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0" />
           <Path x:Name="LeftSadBrow" Data="M4,8 L16,3" Stroke="#17171B" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,1,0,0" />
           <Grid x:Name="LeftTear" Width="6" Height="9" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="1,0,0,-4" Opacity="0">
@@ -86,12 +93,12 @@
            <Ellipse Width="1.5" Height="1.5" Fill="White" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1.8,4" />
       </Grid>
       <Grid Grid.Row="3" Margin="20,0,20,0">
-       <TextBlock x:Name="BatteryText" FontSize="10" Text="Battery" Foreground="#75757A" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,0,0" />
+       <TextBlock x:Name="BatteryText" FontSize="10" Text="Battery" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,0,0" />
       </Grid>
      </Grid>
          <Grid x:Name="RightEye" Width="24" Height="24" Margin="2,0">
           <Grid.RenderTransform><ScaleTransform x:Name="RightEyeScale" CenterX="12" CenterY="12" /></Grid.RenderTransform>
-          <Ellipse Width="22" Height="22" Stroke="#17171B" StrokeThickness="1">
+          <Ellipse x:Name="RightEyeWhite" Width="22" Height="22" Stroke="#17171B" StrokeThickness="1">
            <Ellipse.Fill>
             <RadialGradientBrush GradientOrigin="0.35,0.28" Center="0.42,0.36" RadiusX="0.8" RadiusY="0.8">
              <GradientStop Color="#FFFFFF" Offset="0" />
@@ -101,17 +108,25 @@
            </Ellipse.Fill>
           </Ellipse>
           <Grid x:Name="RightPupil" Width="24" Height="24">
-           <Grid.RenderTransform><TranslateTransform x:Name="RightPupilOffset" /></Grid.RenderTransform>
-           <Grid Width="11" Height="11" HorizontalAlignment="Center" VerticalAlignment="Center">
+           <Grid.RenderTransform><TransformGroup><ScaleTransform x:Name="RightPupilScale" CenterX="12" CenterY="12" /><TranslateTransform x:Name="RightPupilOffset" /></TransformGroup></Grid.RenderTransform>
+           <Grid x:Name="RightRoundPupilVisual" Width="11" Height="11" HorizontalAlignment="Center" VerticalAlignment="Center">
             <Ellipse Fill="#16161B" />
             <Ellipse Width="3.6" Height="3.6" Fill="White" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2.5,1.7,0,0" />
             <Ellipse Width="1.5" Height="1.5" Fill="White" Opacity="0.7" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,2,1.9" />
            </Grid>
+           <Path x:Name="RightStarPupilVisual" Data="M6,0 L7.5,4.1 L12,4.3 L8.5,7.1 L9.7,11.5 L6,9 L2.3,11.5 L3.5,7.1 L0,4.3 L4.5,4.1 Z" Width="12" Height="12" Stretch="Fill" Fill="#FFD54A" Stroke="#9A6500" StrokeThickness="0.6" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+           <Path x:Name="RightHeartPupilVisual" Data="M6,11 C4.8,9.4 0.5,6.6 0.5,3.5 C0.5,1.5 2,0.3 3.7,0.3 C4.8,0.3 5.6,1 6,1.8 C6.4,1 7.2,0.3 8.3,0.3 C10,0.3 11.5,1.5 11.5,3.5 C11.5,6.6 7.2,9.4 6,11 Z" Width="12" Height="12" Stretch="Fill" Fill="#FF5F93" Stroke="#A91F55" StrokeThickness="0.5" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0" />
           </Grid>
+          <Path x:Name="RightSleepyLid" Data="M4,11 Q12,17 20,11" Stroke="#17171B" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0" />
+          <Path x:Name="RightCuriousBrow" Data="M5,5 Q12,1 19,5" Stroke="#17171B" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0" />
           <Path x:Name="RightHappyArc" Data="M5,15 Q12,5.5 19,15" Stroke="#17171B" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0" />
           <Path x:Name="RightSadBrow" Data="M8,3 L20,8" Stroke="#17171B" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,1,0,0" />
          </Grid>
         </StackPanel>
+        <Grid x:Name="KawaiiBlush" Width="62" Height="24" Visibility="Collapsed" IsHitTestVisible="False">
+         <Ellipse Width="8" Height="3.5" Fill="#FF8FB7" Opacity="0.78" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0,0,0,2" />
+         <Ellipse Width="8" Height="3.5" Fill="#FF8FB7" Opacity="0.78" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,2" />
+        </Grid>
         <Path x:Name="HappySparkle" Data="M5,0 L6.2,3.8 L10,5 L6.2,6.2 L5,10 L3.8,6.2 L0,5 L3.8,3.8 Z" Fill="#FFE6A0" Width="10" Height="10" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-5,-9,0" Opacity="0" />
        </Grid>
      </Grid>
@@ -121,62 +136,62 @@
      <TextBlock x:Name="LiveStateIcon" Text="&#xE767;" FontFamily="Segoe Fluent Icons" FontSize="19" VerticalAlignment="Center" />
      <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="4,0,8,0">
       <TextBlock x:Name="LiveStateTitle" Text="Volume" FontSize="11" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-      <TextBlock x:Name="LiveStateDetail" FontSize="9" Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis" />
+      <TextBlock x:Name="LiveStateDetail" FontSize="9" Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis" />
      </StackPanel>
      <StackPanel Grid.Column="2" VerticalAlignment="Center">
       <TextBlock x:Name="LiveStateValue" FontSize="11" HorizontalAlignment="Right" Margin="0,0,0,5" />
-      <Grid x:Name="LiveStateTrack" Height="4"><Border Background="#292929" CornerRadius="2" /><Border x:Name="LiveStateFill" Width="0" Background="{StaticResource TextBrush}" CornerRadius="2" HorizontalAlignment="Left" /></Grid>
+      <Grid x:Name="LiveStateTrack" Height="4"><Border Background="{DynamicResource LineBrush}" CornerRadius="2" /><Border x:Name="LiveStateFill" Width="0" Background="{DynamicResource TextBrush}" CornerRadius="2" HorizontalAlignment="Left" /></Grid>
      </StackPanel>
     </Grid>
-    <Grid x:Name="ExpandedPanel" Visibility="Collapsed" Opacity="0" Margin="20,14,20,12">
-     <Grid.RowDefinitions><RowDefinition Height="24" /><RowDefinition Height="30" /><RowDefinition x:Name="ExpandedContentRow" Height="122" /><RowDefinition Height="24" /></Grid.RowDefinitions>
+    <Grid x:Name="ExpandedPanel" Visibility="Collapsed" Opacity="1" Margin="20,14,20,12">
+     <Grid.RowDefinitions><RowDefinition Height="24" /><RowDefinition Height="42" /><RowDefinition x:Name="ExpandedContentRow" Height="122" /><RowDefinition Height="24" /></Grid.RowDefinitions>
       <Grid>
        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="28" /><ColumnDefinition Width="28" /></Grid.ColumnDefinitions>
-       <TextBlock x:Name="HeaderSubtitle" Text="Now playing" FontSize="11" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-       <Button Grid.Column="1" Style="{StaticResource IconButton}" Width="28" Height="28" MinHeight="28" Content="&#xE713;" Foreground="#68686D" Click="Settings_Click" ToolTip="Settings" AutomationProperties.Name="Open settings" />
-       <Button Grid.Column="2" Style="{StaticResource IconButton}" Width="28" Height="28" MinHeight="28" Content="&#xE70E;" Foreground="#68686D" Click="Collapse_Click" ToolTip="Collapse" AutomationProperties.Name="Collapse Vajra Pulse" />
+       <TextBlock x:Name="HeaderSubtitle" Text="Now playing" FontSize="11" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+       <Button Grid.Column="1" Style="{StaticResource IconButton}" Width="28" Height="28" MinHeight="28" Content="&#xE713;" Foreground="{DynamicResource MutedBrush}" Click="Settings_Click" ToolTip="Settings" AutomationProperties.Name="Open settings" />
+       <Button Grid.Column="2" Style="{StaticResource IconButton}" Width="28" Height="28" MinHeight="28" Content="&#xE70E;" Foreground="{DynamicResource MutedBrush}" Click="Collapse_Click" ToolTip="Collapse" AutomationProperties.Name="Collapse Vajra Pulse" />
       </Grid>
-      <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,4,0,4">
-       <Button x:Name="MusicTab" Content="🎵" Style="{StaticResource GhostButton}" FontSize="14" MinHeight="24" Padding="4,0" Click="MusicTab_Click" AutomationProperties.Name="Show music controls" />
-       <Button x:Name="FocusTab" Content="⏲️" Style="{StaticResource GhostButton}" FontSize="14" MinHeight="24" Padding="4,0" Click="FocusTab_Click" AutomationProperties.Name="Show focus timer" />
-       <Button x:Name="FilesTab" Content="📂" Style="{StaticResource GhostButton}" FontSize="14" MinHeight="24" Padding="4,0" Click="FilesTab_Click" AutomationProperties.Name="Show file shelf" />
-       <Button x:Name="CalendarTab" Content="📅" Style="{StaticResource GhostButton}" FontSize="14" MinHeight="24" Padding="4,0" Click="CalendarTab_Click" AutomationProperties.Name="Show calendar" />
-       <Button x:Name="InboxTab" Content="🔔" Style="{StaticResource GhostButton}" FontSize="14" MinHeight="24" Padding="4,0" Click="InboxTab_Click" AutomationProperties.Name="Show notification previews" />
-       <Button x:Name="ToolsTab" Content="⚙️" Style="{StaticResource GhostButton}" FontSize="14" MinHeight="24" Padding="4,0" Click="ToolsTab_Click" AutomationProperties.Name="Show tools" />
+      <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,4,0,4">
+       <Button x:Name="MusicTab" Content="&#xEC4F;" Style="{StaticResource ActivityTabButton}" Margin="0,0,8,0" Click="MusicTab_Click" ToolTip="Music" AutomationProperties.Name="Show music controls" />
+       <Button x:Name="FocusTab" Content="&#xE916;" Style="{StaticResource ActivityTabButton}" Margin="0,0,8,0" Click="FocusTab_Click" ToolTip="Focus" AutomationProperties.Name="Show focus timer" />
+       <Button x:Name="FilesTab" Content="&#xE838;" Style="{StaticResource ActivityTabButton}" Margin="0,0,8,0" Click="FilesTab_Click" ToolTip="Files" AutomationProperties.Name="Show file shelf" />
+       <Button x:Name="CalendarTab" Content="&#xE787;" Style="{StaticResource ActivityTabButton}" Margin="0,0,8,0" Click="CalendarTab_Click" ToolTip="Calendar" AutomationProperties.Name="Show calendar" />
+       <Button x:Name="InboxTab" Content="&#xEA8F;" Style="{StaticResource ActivityTabButton}" Margin="0,0,8,0" Click="InboxTab_Click" ToolTip="Alerts" AutomationProperties.Name="Show notification previews" />
+       <Button x:Name="ToolsTab" Content="&#xE713;" Style="{StaticResource ActivityTabButton}" Click="ToolsTab_Click" ToolTip="Tools" AutomationProperties.Name="Show tools" />
       </StackPanel>
      <Grid x:Name="MusicActivity" Grid.Row="2">
       <Grid.RowDefinitions><RowDefinition Height="56" /><RowDefinition Height="24" /><RowDefinition Height="42" /></Grid.RowDefinitions>
       <Grid>
        <Grid.ColumnDefinitions><ColumnDefinition Width="70" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-       <Border Width="56" Height="56" CornerRadius="12" Background="#171717" HorizontalAlignment="Left">
+       <Border Width="56" Height="56" CornerRadius="12" Background="{DynamicResource PanelBrush}" HorizontalAlignment="Left">
         <Grid>
-         <TextBlock x:Name="ArtworkFallback" Text="♪" FontSize="30" Foreground="#A1A1A6" HorizontalAlignment="Center" VerticalAlignment="Center" />
+         <TextBlock x:Name="ArtworkFallback" Text="♪" FontSize="30" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
          <Image x:Name="ExpandedArtwork" Stretch="UniformToFill"><Image.Clip><RectangleGeometry Rect="0,0,56,56" RadiusX="12" RadiusY="12" /></Image.Clip></Image>
         </Grid>
        </Border>
        <StackPanel Grid.Column="1" VerticalAlignment="Center">
         <TextBlock x:Name="TrackTitle" Text="Nothing playing" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-        <TextBlock x:Name="TrackArtist" Text="Start music in your app or browser" Margin="0,4,0,0" FontSize="12" Foreground="{StaticResource MutedBrush}" TextTrimming="CharacterEllipsis" />
+        <TextBlock x:Name="TrackArtist" Text="Start music in your app or browser" Margin="0,4,0,0" FontSize="12" Foreground="{DynamicResource MutedBrush}" TextTrimming="CharacterEllipsis" />
        </StackPanel>
       </Grid>
       <Grid Grid.Row="1" Margin="0,8,0,0">
        <Grid.ColumnDefinitions><ColumnDefinition Width="34" /><ColumnDefinition Width="*" /><ColumnDefinition Width="34" /></Grid.ColumnDefinitions>
-       <TextBlock x:Name="MediaElapsed" Text="0:00" FontSize="9" Foreground="#75757A" VerticalAlignment="Center" />
-       <Slider x:Name="MediaSeekSlider" Grid.Column="1" Style="{StaticResource PulseSlider}" Minimum="0" Maximum="1" Value="0" Margin="3,0" MinHeight="16" Height="16" ValueChanged="Seek_Changed" PreviewMouseLeftButtonUp="Seek_MouseUp" PreviewKeyUp="Seek_KeyUp" AutomationProperties.Name="Playback position" />
-       <TextBlock x:Name="MediaRemaining" Grid.Column="2" Text="−0:00" FontSize="9" Foreground="#75757A" HorizontalAlignment="Right" VerticalAlignment="Center" />
+       <TextBlock x:Name="MediaElapsed" Text="0:00" FontSize="9" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" />
+       <Slider x:Name="MediaSeekSlider" Grid.Column="1" Style="{StaticResource MediaSeekSlider}" Minimum="0" Maximum="1" Value="0" Margin="3,0" MinHeight="16" Height="16" ValueChanged="Seek_Changed" PreviewMouseLeftButtonUp="Seek_MouseUp" PreviewKeyUp="Seek_KeyUp" AutomationProperties.Name="Playback position" />
+       <TextBlock x:Name="MediaRemaining" Grid.Column="2" Text="−0:00" FontSize="9" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
       </Grid>
       <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom">
        <Button x:Name="PreviousButton" Style="{StaticResource GhostButton}" Width="58" Height="38" Padding="0" Click="MediaPrevious_Click" ToolTip="Previous track" AutomationProperties.Name="Previous track">
-        <Path Fill="{StaticResource TextBrush}" Data="M0,0 L3,0 L3,16 L0,16 Z M15,0 L15,16 L4,8 Z M26,0 L26,16 L15,8 Z" Width="21" Height="16" Stretch="Fill" />
+        <Path Fill="{DynamicResource TextBrush}" Data="M0,0 L3,0 L3,16 L0,16 Z M15,0 L15,16 L4,8 Z M26,0 L26,16 L15,8 Z" Width="21" Height="16" Stretch="Fill" />
        </Button>
        <Button x:Name="PlayButton" Style="{StaticResource GhostButton}" Width="70" Height="38" Padding="0" Click="MediaPlay_Click" ToolTip="Play / pause" AutomationProperties.Name="Play or pause">
         <Grid Width="22" Height="23">
-         <Path x:Name="PlayGlyph" Fill="{StaticResource TextBrush}" Data="M3,1 L3,22 L21,11.5 Z" />
-         <Path x:Name="PauseGlyph" Fill="{StaticResource TextBrush}" Data="M3,1 L9,1 L9,22 L3,22 Z M14,1 L20,1 L20,22 L14,22 Z" Visibility="Collapsed" />
+         <Path x:Name="PlayGlyph" Fill="{DynamicResource TextBrush}" Data="M3,1 L3,22 L21,11.5 Z" />
+         <Path x:Name="PauseGlyph" Fill="{DynamicResource TextBrush}" Data="M3,1 L9,1 L9,22 L3,22 Z M14,1 L20,1 L20,22 L14,22 Z" Visibility="Collapsed" />
         </Grid>
        </Button>
        <Button x:Name="NextButton" Style="{StaticResource GhostButton}" Width="58" Height="38" Padding="0" Click="MediaNext_Click" ToolTip="Next track" AutomationProperties.Name="Next track">
-        <Path Fill="{StaticResource TextBrush}" Data="M0,0 L0,16 L11,8 Z M11,0 L11,16 L22,8 Z M23,0 L26,0 L26,16 L23,16 Z" Width="21" Height="16" Stretch="Fill" />
+        <Path Fill="{DynamicResource TextBrush}" Data="M0,0 L0,16 L11,8 Z M11,0 L11,16 L22,8 Z M23,0 L26,0 L26,16 L23,16 Z" Width="21" Height="16" Stretch="Fill" />
        </Button>
       </StackPanel>
      </Grid>
@@ -184,10 +199,10 @@
       <Grid.RowDefinitions><RowDefinition Height="74" /><RowDefinition Height="48" /></Grid.RowDefinitions>
       <Grid>
        <StackPanel>
-        <TextBlock x:Name="FocusLabel" Text="Focus timer" FontSize="11" Foreground="{StaticResource TimerBrush}" />
-        <TextBlock x:Name="TimerText" Text="25:00" FontSize="42" FontWeight="Light" Foreground="{StaticResource TimerBrush}" Margin="0,1,0,0" />
+        <TextBlock x:Name="FocusLabel" Text="Focus timer" FontSize="11" Foreground="{DynamicResource TimerBrush}" />
+        <TextBlock x:Name="TimerText" Text="25:00" FontSize="42" FontWeight="Light" Foreground="{DynamicResource TimerBrush}" Margin="0,1,0,0" />
        </StackPanel>
-       <Button x:Name="TimerButton" Style="{StaticResource AccentButton}" Background="{StaticResource TimerBrush}" Content="Start focus" MinWidth="96" HorizontalAlignment="Right" VerticalAlignment="Center" Click="Timer_Click" />
+       <Button x:Name="TimerButton" Style="{StaticResource AccentButton}" Background="{DynamicResource TimerBrush}" Content="Start focus" MinWidth="96" HorizontalAlignment="Right" VerticalAlignment="Center" Click="Timer_Click" />
       </Grid>
       <Grid Grid.Row="1">
        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -195,30 +210,30 @@
         <Button Style="{StaticResource PulseButton}" Content="15 min" Tag="15" Padding="12,5" Margin="0,0,6,0" Click="Preset_Click" AutomationProperties.Name="Set timer to 15 minutes" />
         <Button Style="{StaticResource PulseButton}" Content="25 min" Tag="25" Padding="12,5" Click="Preset_Click" AutomationProperties.Name="Set timer to 25 minutes" />
        </StackPanel>
-       <Button x:Name="ResetButton" Style="{StaticResource IconButton}" Content="&#xE777;" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource TimerBrush}" Click="Reset_Click" ToolTip="Reset timer" AutomationProperties.Name="Reset focus timer" />
+       <Button x:Name="ResetButton" Style="{StaticResource IconButton}" Content="&#xE777;" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="{DynamicResource TimerBrush}" Click="Reset_Click" ToolTip="Reset timer" AutomationProperties.Name="Reset focus timer" />
       </Grid>
      </Grid>
      <Grid x:Name="ShelfActivity" Grid.Row="2" Visibility="Collapsed">
       <Grid.RowDefinitions><RowDefinition Height="86" /><RowDefinition Height="36" /></Grid.RowDefinitions>
-      <ListBox x:Name="ShelfList" Background="Transparent" Foreground="{StaticResource TextBrush}" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" PreviewMouseLeftButtonDown="Shelf_MouseDown" PreviewMouseMove="Shelf_MouseMove" AutomationProperties.Name="Local file shelf">
-       <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="0" /><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border Background="{StaticResource PanelBrush}" CornerRadius="10" Margin="0,0,0,4" Padding="8,4"><ContentPresenter /></Border></ControlTemplate></Setter.Value></Setter></Style></ListBox.ItemContainerStyle>
-       <ListBox.ItemTemplate><DataTemplate><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="24" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding Name}" FontSize="11" TextTrimming="CharacterEllipsis" /><TextBlock Text="{Binding Detail}" FontSize="9" Foreground="{StaticResource MutedBrush}" /></StackPanel><Button Grid.Column="1" Content="×" Style="{StaticResource GhostButton}" Padding="0" MinHeight="24" Tag="{Binding}" Click="Shelf_Remove_Click" ToolTip="Remove shortcut only" AutomationProperties.Name="Remove shelf shortcut" /></Grid></DataTemplate></ListBox.ItemTemplate>
+      <ListBox x:Name="ShelfList" Background="Transparent" Foreground="{DynamicResource TextBrush}" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled" PreviewMouseLeftButtonDown="Shelf_MouseDown" PreviewMouseMove="Shelf_MouseMove" AutomationProperties.Name="Local file shelf">
+       <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="0" /><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border Background="{DynamicResource PanelBrush}" CornerRadius="10" Margin="0,0,0,4" Padding="8,4"><ContentPresenter /></Border></ControlTemplate></Setter.Value></Setter></Style></ListBox.ItemContainerStyle>
+       <ListBox.ItemTemplate><DataTemplate><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="24" /></Grid.ColumnDefinitions><StackPanel><TextBlock Text="{Binding Name}" FontSize="11" TextTrimming="CharacterEllipsis" /><TextBlock Text="{Binding Detail}" FontSize="9" Foreground="{DynamicResource MutedBrush}" /></StackPanel><Button Grid.Column="1" Content="×" Style="{StaticResource GhostButton}" Padding="0" MinHeight="24" Tag="{Binding}" Click="Shelf_Remove_Click" ToolTip="Remove shortcut only" AutomationProperties.Name="Remove shelf shortcut" /></Grid></DataTemplate></ListBox.ItemTemplate>
       </ListBox>
-      <TextBlock x:Name="ShelfEmptyText" Text="Drop files onto the pill.&#x0A;Drag them back out to another app." TextAlignment="Center" FontSize="12" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" IsHitTestVisible="False" />
+      <TextBlock x:Name="ShelfEmptyText" Text="Drop files onto the pill.&#x0A;Drag them back out to another app." TextAlignment="Center" FontSize="12" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" IsHitTestVisible="False" />
       <Grid Grid.Row="1"><Button Content="Add files" Style="{StaticResource PulseButton}" HorizontalAlignment="Left" Click="Shelf_Add_Click" /><Button Content="Show folder" Style="{StaticResource GhostButton}" HorizontalAlignment="Right" Click="Shelf_Reveal_Click" /></Grid>
      </Grid>
      <Grid x:Name="CalendarActivity" Grid.Row="2" Visibility="Collapsed">
       <Grid.RowDefinitions><RowDefinition Height="18" /><RowDefinition Height="36" /><RowDefinition Height="28" /><RowDefinition Height="40" /></Grid.RowDefinitions>
-      <TextBlock x:Name="MeetingStatus" Text="No calendar connected" FontSize="10" Foreground="{StaticResource MutedBrush}" />
+      <TextBlock x:Name="MeetingStatus" Text="No calendar connected" FontSize="10" Foreground="{DynamicResource MutedBrush}" />
       <TextBlock x:Name="MeetingTitle" Grid.Row="1" Text="Import a calendar .ics file" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
-      <TextBlock x:Name="MeetingWhen" Grid.Row="2" Text="Local import. No account access." FontSize="11" Foreground="{StaticResource MutedBrush}" />
+      <TextBlock x:Name="MeetingWhen" Grid.Row="2" Text="Local import. No account access." FontSize="11" Foreground="{DynamicResource MutedBrush}" />
       <Grid Grid.Row="3"><Button x:Name="JoinMeetingButton" Content="Join meeting" Style="{StaticResource AccentButton}" HorizontalAlignment="Left" Click="Calendar_Join_Click" IsEnabled="False" /><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="Import .ics" Style="{StaticResource GhostButton}" Click="Calendar_Import_Click" /><Button Content="Clear" Style="{StaticResource GhostButton}" Click="Calendar_Clear_Click" /></StackPanel></Grid>
      </Grid>
      <Grid x:Name="InboxActivity" Grid.Row="2" Visibility="Collapsed">
       <Grid.RowDefinitions><RowDefinition Height="18" /><RowDefinition Height="28" /><RowDefinition Height="40" /><RowDefinition Height="36" /></Grid.RowDefinitions>
-      <TextBlock x:Name="InboxApp" Text="Private by default" FontSize="10" Foreground="{StaticResource MutedBrush}" />
+      <TextBlock x:Name="InboxApp" Text="Private by default" FontSize="10" Foreground="{DynamicResource MutedBrush}" />
       <TextBlock x:Name="InboxTitle" Grid.Row="1" Text="Notification previews are off" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-      <TextBlock x:Name="InboxBody" Grid.Row="2" Text="Enable previews in Settings, then choose apps. No messages have been read." FontSize="11" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
+      <TextBlock x:Name="InboxBody" Grid.Row="2" Text="Enable previews in Settings, then choose apps. No messages have been read." FontSize="11" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
       <Grid Grid.Row="3"><Button Content="Privacy settings" Style="{StaticResource PulseButton}" HorizontalAlignment="Left" Click="Settings_Click" /><Button Content="Next alert" Style="{StaticResource GhostButton}" HorizontalAlignment="Right" Click="Inbox_Next_Click" /></Grid>
      </Grid>
      <Grid x:Name="ToolsActivity" Grid.Row="2" Visibility="Collapsed">
@@ -231,48 +246,61 @@
       <Grid x:Name="SystemToolsPanel" Grid.Row="1" Margin="0,6,0,0">
        <Grid.RowDefinitions><RowDefinition Height="58" /><RowDefinition Height="58" /><RowDefinition Height="58" /><RowDefinition Height="*" /></Grid.RowDefinitions>
        <Grid><Grid.RowDefinitions><RowDefinition Height="22" /><RowDefinition Height="18" /></Grid.RowDefinitions>
-        <TextBlock Text="CPU" FontSize="11" Foreground="{StaticResource MutedBrush}" /><TextBlock x:Name="CpuValueText" Text="Warming up" HorizontalAlignment="Right" FontSize="11" />
+        <TextBlock Text="CPU" FontSize="11" Foreground="{DynamicResource MutedBrush}" /><TextBlock x:Name="CpuValueText" Text="Warming up" HorizontalAlignment="Right" FontSize="11" />
         <ProgressBar x:Name="CpuMeter" Grid.Row="1" Style="{StaticResource PulseProgress}" Minimum="0" Maximum="100" Value="0" AutomationProperties.Name="CPU usage" />
        </Grid>
        <Grid Grid.Row="1"><Grid.RowDefinitions><RowDefinition Height="22" /><RowDefinition Height="18" /></Grid.RowDefinitions>
-        <TextBlock Text="Memory" FontSize="11" Foreground="{StaticResource MutedBrush}" /><TextBlock x:Name="MemoryValueText" Text="Checking" HorizontalAlignment="Right" FontSize="11" />
+        <TextBlock Text="Memory" FontSize="11" Foreground="{DynamicResource MutedBrush}" /><TextBlock x:Name="MemoryValueText" Text="Checking" HorizontalAlignment="Right" FontSize="11" />
         <ProgressBar x:Name="MemoryMeter" Grid.Row="1" Style="{StaticResource PulseProgress}" Minimum="0" Maximum="100" Value="0" AutomationProperties.Name="Memory usage" />
        </Grid>
        <Grid Grid.Row="2"><Grid.RowDefinitions><RowDefinition Height="22" /><RowDefinition Height="22" /></Grid.RowDefinitions>
-        <TextBlock Text="Network" FontSize="11" Foreground="{StaticResource MutedBrush}" /><TextBlock x:Name="NetworkInterfaceText" Text="Checking" HorizontalAlignment="Right" FontSize="10" Foreground="{StaticResource MutedBrush}" />
-        <StackPanel Grid.Row="1" Orientation="Horizontal"><TextBlock Text="Down " Foreground="{StaticResource MutedBrush}" FontSize="11" /><TextBlock x:Name="NetworkDownText" Text="—" FontSize="11" Width="92" /><TextBlock Text="Up " Foreground="{StaticResource MutedBrush}" FontSize="11" /><TextBlock x:Name="NetworkUpText" Text="—" FontSize="11" /></StackPanel>
+        <TextBlock Text="Network" FontSize="11" Foreground="{DynamicResource MutedBrush}" /><TextBlock x:Name="NetworkInterfaceText" Text="Checking" HorizontalAlignment="Right" FontSize="10" Foreground="{DynamicResource MutedBrush}" />
+        <StackPanel Grid.Row="1" Orientation="Horizontal"><TextBlock Text="Down " Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="NetworkDownText" Text="—" FontSize="11" Width="92" /><TextBlock Text="Up " Foreground="{DynamicResource MutedBrush}" FontSize="11" /><TextBlock x:Name="NetworkUpText" Text="—" FontSize="11" /></StackPanel>
        </Grid>
-       <TextBlock x:Name="SystemTelemetryStatus" Grid.Row="3" Text="Local system counters only" FontSize="9" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" VerticalAlignment="Bottom" />
+       <TextBlock x:Name="SystemTelemetryStatus" Grid.Row="3" Text="Local system counters only" FontSize="9" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" VerticalAlignment="Bottom" />
       </Grid>
       <Grid x:Name="AppsToolsPanel" Grid.Row="1" Margin="0,6,0,0" Visibility="Collapsed">
        <ItemsControl x:Name="LaunchSlotsList" AutomationProperties.Name="Five application launch slots">
-        <ItemsControl.ItemTemplate><DataTemplate><Button Style="{StaticResource PulseButton}" Height="36" Margin="0,0,0,4" HorizontalContentAlignment="Stretch" Tag="{Binding}" Click="LaunchSlot_Click" ToolTip="{Binding Detail}" AutomationProperties.Name="{Binding AutomationName}" AutomationProperties.HelpText="{Binding AutomationHelpText}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28" /><ColumnDefinition Width="*" /><ColumnDefinition Width="100" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Number}" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" /><TextBlock Grid.Column="2" Text="{Binding VisibleDetail}" Margin="8,0,0,0" Foreground="{StaticResource MutedBrush}" FontSize="9" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" VerticalAlignment="Center" /></Grid></Button></DataTemplate></ItemsControl.ItemTemplate>
+        <ItemsControl.ItemTemplate><DataTemplate><Button Style="{StaticResource PulseButton}" Height="36" Margin="0,0,0,4" HorizontalContentAlignment="Stretch" Tag="{Binding}" Click="LaunchSlot_Click" ToolTip="{Binding Detail}" AutomationProperties.Name="{Binding AutomationName}" AutomationProperties.HelpText="{Binding AutomationHelpText}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28" /><ColumnDefinition Width="*" /><ColumnDefinition Width="100" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Number}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" /><TextBlock Grid.Column="2" Text="{Binding VisibleDetail}" Margin="8,0,0,0" Foreground="{DynamicResource MutedBrush}" FontSize="9" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right" VerticalAlignment="Center" /></Grid></Button></DataTemplate></ItemsControl.ItemTemplate>
        </ItemsControl>
       </Grid>
       <Grid x:Name="MixerToolsPanel" Grid.Row="1" Margin="0,6,0,0" Visibility="Collapsed">
-       <TextBlock x:Name="MixerEmptyText" Text="Checking active application audio…" Foreground="{StaticResource MutedBrush}" TextAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Center" />
-       <ListBox x:Name="MixerList" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextBrush}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Active application volume mixer">
+       <TextBlock x:Name="MixerEmptyText" Text="Checking active application audio…" Foreground="{DynamicResource MutedBrush}" TextAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Center" />
+       <ListBox x:Name="MixerList" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextBrush}" ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Active application volume mixer">
         <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="Focusable" Value="False" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0,0,0,5" /><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><ContentPresenter /></ControlTemplate></Setter.Value></Setter></Style></ListBox.ItemContainerStyle>
-        <ListBox.ItemTemplate><DataTemplate><Grid Height="42"><Grid.ColumnDefinitions><ColumnDefinition Width="100" /><ColumnDefinition Width="*" /><ColumnDefinition Width="42" /><ColumnDefinition Width="30" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Name}" FontSize="10" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding Name}" /><Slider Grid.Column="1" Style="{StaticResource PulseSlider}" Minimum="0" Maximum="100" Value="{Binding Volume, Mode=OneWay}" Tag="{Binding}" PreviewMouseLeftButtonUp="MixerVolume_MouseUp" PreviewKeyUp="MixerVolume_KeyUp" AutomationProperties.Name="{Binding VolumeAutomationName}" /><TextBlock Grid.Column="2" Text="{Binding VolumeText}" FontSize="9" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" /><Button Grid.Column="3" Style="{StaticResource IconButton}" Width="28" Height="28" MinHeight="28" Content="{Binding MuteGlyph}" Tag="{Binding}" Click="MixerMute_Click" AutomationProperties.Name="{Binding MuteAutomationName}" /></Grid></DataTemplate></ListBox.ItemTemplate>
+        <ListBox.ItemTemplate><DataTemplate><Grid Height="42"><Grid.ColumnDefinitions><ColumnDefinition Width="100" /><ColumnDefinition Width="*" /><ColumnDefinition Width="42" /><ColumnDefinition Width="30" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Name}" FontSize="10" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip="{Binding Name}" /><Slider Grid.Column="1" Style="{StaticResource PulseSlider}" Minimum="0" Maximum="100" Value="{Binding Volume, Mode=OneWay}" Tag="{Binding}" PreviewMouseLeftButtonUp="MixerVolume_MouseUp" PreviewKeyUp="MixerVolume_KeyUp" AutomationProperties.Name="{Binding VolumeAutomationName}" /><TextBlock Grid.Column="2" Text="{Binding VolumeText}" FontSize="9" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" /><Button Grid.Column="3" Style="{StaticResource IconButton}" Width="28" Height="28" MinHeight="28" Content="{Binding MuteGlyph}" Tag="{Binding}" Click="MixerMute_Click" AutomationProperties.Name="{Binding MuteAutomationName}" /></Grid></DataTemplate></ListBox.ItemTemplate>
        </ListBox>
       </Grid>
      </Grid>
 
     </Grid>
-    <Grid x:Name="SettingsPanel" Visibility="Collapsed" Opacity="0" Margin="20,16,20,14">
+    <Grid x:Name="SettingsPanel" Visibility="Collapsed" Opacity="1" Margin="20,16,20,14">
      <Grid.RowDefinitions><RowDefinition Height="42" /><RowDefinition Height="*" /><RowDefinition Height="28" /></Grid.RowDefinitions>
      <Grid>
-      <StackPanel VerticalAlignment="Center"><TextBlock Text="Vajra Pulse" FontSize="17" FontWeight="SemiBold" /><TextBlock Text="Make it yours." FontSize="10" Foreground="{StaticResource MutedBrush}" /></StackPanel>
+      <StackPanel VerticalAlignment="Center"><TextBlock Text="Vajra Pulse" FontSize="17" FontWeight="SemiBold" /><TextBlock Text="Make it yours." FontSize="10" Foreground="{DynamicResource MutedBrush}" /></StackPanel>
       <Button Style="{StaticResource IconButton}" Content="&#xE72B;" HorizontalAlignment="Right" Click="Back_Click" ToolTip="Back" AutomationProperties.Name="Back to island" />
      </Grid>
       <ScrollViewer Grid.Row="1" Margin="0,12,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
        <StackPanel Margin="0,0,6,0">
-        <TextBlock Text="Appearance" Style="{StaticResource SectionLabel}" Margin="0,0,0,6" />
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
-          <Button Content="Light" Style="{StaticResource PulseButton}" Width="60" Margin="0,0,6,0" Click="LightTheme_Click" />
-          <Button Content="Dark" Style="{StaticResource PulseButton}" Width="60" Margin="0,0,6,0" Click="DarkTheme_Click" />
-          <Button Content="Glassy" Style="{StaticResource PulseButton}" Width="60" Click="GlassTheme_Click" />
-        </StackPanel>
+        <TextBlock Text="Design mode" Style="{StaticResource SectionLabel}" Margin="0,0,0,6" />
+        <UniformGrid Columns="3" Margin="0,0,0,12">
+         <RadioButton x:Name="CuteModeCard" GroupName="VisualModes" Tag="Cute" Style="{StaticResource PreviewCardRadioButton}" Height="72" Margin="0,0,5,0" Checked="VisualMode_Click" AutomationProperties.Name="Use Cute design mode">
+          <StackPanel><Border Height="28" CornerRadius="8" Background="#1D142A" BorderBrush="#FF78B7" BorderThickness="1"><StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"><Ellipse Width="8" Height="8" Fill="White" Margin="2" /><Ellipse Width="8" Height="8" Fill="White" Margin="2" /></StackPanel></Border><TextBlock Text="Cute" FontSize="10" HorizontalAlignment="Center" Margin="0,4,0,0" /></StackPanel>
+         </RadioButton>
+         <RadioButton x:Name="GlassModeCard" GroupName="VisualModes" Tag="Glass" Style="{StaticResource PreviewCardRadioButton}" Height="72" Margin="2,0,3,0" Checked="VisualMode_Click" AutomationProperties.Name="Use Glass design mode">
+          <StackPanel><Border Height="28" CornerRadius="8" Background="#B8182230" BorderBrush="#80FFFFFF" BorderThickness="1"><Border Width="36" Height="7" CornerRadius="4" Background="#45FFFFFF" /></Border><TextBlock Text="Glass" FontSize="10" HorizontalAlignment="Center" Margin="0,4,0,0" /></StackPanel>
+         </RadioButton>
+         <RadioButton x:Name="NeonModeCard" GroupName="VisualModes" Tag="Neon" Style="{StaticResource PreviewCardRadioButton}" Height="72" Margin="5,0,0,0" Checked="VisualMode_Click" AutomationProperties.Name="Use Neon design mode">
+          <StackPanel><Border Height="28" CornerRadius="8" Background="#03060A" BorderBrush="#3DF6FF" BorderThickness="1"><Rectangle Width="38" Height="2" Fill="#3DF6FF" /></Border><TextBlock Text="Neon" FontSize="10" HorizontalAlignment="Center" Margin="0,4,0,0" /></StackPanel>
+         </RadioButton>
+        </UniformGrid>
+        <TextBlock Text="Cute eyes" Style="{StaticResource SectionLabel}" Margin="0,0,0,6" />
+        <UniformGrid Columns="3" Margin="0,0,0,12">
+         <RadioButton x:Name="GooglyEyesButton" GroupName="EyeStyles" Tag="Googly" Style="{StaticResource PreviewCardRadioButton}" Height="58" Margin="0,0,5,0" Checked="EyeStyle_Click" AutomationProperties.Name="Use googly eyes"><StackPanel><TextBlock Text="●  ●" FontSize="15" HorizontalAlignment="Center" /><TextBlock Text="Googly" FontSize="9" HorizontalAlignment="Center" /></StackPanel></RadioButton>
+         <RadioButton x:Name="KawaiiEyesButton" GroupName="EyeStyles" Tag="Kawaii" Style="{StaticResource PreviewCardRadioButton}" Height="58" Margin="2,0,3,0" Checked="EyeStyle_Click" AutomationProperties.Name="Use kawaii eyes"><StackPanel><TextBlock Text="◕  ◕" Foreground="#FF8FB7" FontSize="15" HorizontalAlignment="Center" /><TextBlock Text="Kawaii" FontSize="9" HorizontalAlignment="Center" /></StackPanel></RadioButton>
+         <RadioButton x:Name="StarryEyesButton" GroupName="EyeStyles" Tag="Starry" Style="{StaticResource PreviewCardRadioButton}" Height="58" Margin="5,0,0,0" Checked="EyeStyle_Click" AutomationProperties.Name="Use starry eyes"><StackPanel><TextBlock Text="★  ★" Foreground="#FFD54A" FontSize="15" HorizontalAlignment="Center" /><TextBlock Text="Starry" FontSize="9" HorizontalAlignment="Center" /></StackPanel></RadioButton>
+        </UniformGrid>
+        <CheckBox x:Name="ArtworkAccentCheck" Content="Color music controls from album artwork" Style="{StaticResource PulseCheckBox}" Click="Preferences_Changed" />
         <CheckBox x:Name="HoverCheck" Content="Expand on hover" Style="{StaticResource PulseCheckBox}" Click="Preferences_Changed" />
 
       <CheckBox x:Name="FullscreenCheck" Content="Hide over fullscreen apps" Style="{StaticResource PulseCheckBox}" Click="Preferences_Changed" />
@@ -285,44 +313,50 @@
       <CheckBox x:Name="StartWithWindowsCheck" Content="Start with Windows" Style="{StaticResource PulseCheckBox}" Click="Startup_Changed" />
       <Grid Margin="0,12,0,0"><TextBlock Text="Distance from top edge" Style="{StaticResource SectionLabel}" /><TextBlock x:Name="GapText" Text="10 px" Style="{StaticResource SectionLabel}" HorizontalAlignment="Right" /></Grid>
       <Slider x:Name="GapSlider" Style="{StaticResource PulseSlider}" Minimum="0" Maximum="80" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="Gap_Changed" AutomationProperties.Name="Distance from screen top" />
-      <Grid Margin="0,4,0,12"><TextBlock Text="Default focus minutes" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" /><TextBox x:Name="FocusMinutesBox" Width="52" Height="28" Background="{StaticResource PanelBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource LineBrush}" Padding="8,3" HorizontalAlignment="Right" LostFocus="FocusMinutes_LostFocus" AutomationProperties.Name="Default focus minutes" /></Grid>
+      <TextBlock Text="Screen position" Style="{StaticResource SectionLabel}" Margin="0,8,0,5" />
+      <UniformGrid Columns="3" Margin="0,0,0,10">
+       <RadioButton x:Name="DockLeftButton" GroupName="DockPosition" Content="Top left" Tag="TopLeft" Style="{StaticResource ChoiceChipRadioButton}" Margin="0,0,5,0" Checked="DockPosition_Click" AutomationProperties.Name="Dock at top left" />
+       <RadioButton x:Name="DockCenterButton" GroupName="DockPosition" Content="Top center" Tag="TopCenter" Style="{StaticResource ChoiceChipRadioButton}" Margin="2,0,3,0" Checked="DockPosition_Click" AutomationProperties.Name="Dock at top center" />
+       <RadioButton x:Name="DockRightButton" GroupName="DockPosition" Content="Top right" Tag="TopRight" Style="{StaticResource ChoiceChipRadioButton}" Margin="5,0,0,0" Checked="DockPosition_Click" AutomationProperties.Name="Dock at top right" />
+      </UniformGrid>
+      <Grid Margin="0,4,0,12"><TextBlock Text="Default focus minutes" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" /><TextBox x:Name="FocusMinutesBox" Width="52" Height="28" Background="{DynamicResource PanelBrush}" Foreground="{DynamicResource TextBrush}" BorderBrush="{DynamicResource LineBrush}" Padding="8,3" HorizontalAlignment="Right" LostFocus="FocusMinutes_LostFocus" AutomationProperties.Name="Default focus minutes" /></Grid>
       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="10" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><Button Content="Next display" Style="{StaticResource PulseButton}" Click="Display_Click" /><Button Grid.Column="2" Content="Test animation" Style="{StaticResource PulseButton}" Click="Test_Click" /></Grid>
       <Grid Margin="0,10,0,0">
        <Grid.ColumnDefinitions><ColumnDefinition Width="22" /><ColumnDefinition Width="*" /><ColumnDefinition Width="34" /></Grid.ColumnDefinitions>
-       <Button x:Name="MuteButton" Style="{StaticResource IconButton}" Width="22" Height="28" MinHeight="28" FontSize="12" Foreground="#8E8E93" Content="&#xE767;" Click="Mute_Click" ToolTip="Mute / unmute" AutomationProperties.Name="Mute or unmute system audio" />
+       <Button x:Name="MuteButton" Style="{StaticResource IconButton}" Width="22" Height="28" MinHeight="28" FontSize="12" Foreground="{DynamicResource MutedBrush}" Content="&#xE767;" Click="Mute_Click" ToolTip="Mute / unmute" AutomationProperties.Name="Mute or unmute system audio" />
        <Slider x:Name="VolumeSlider" Grid.Column="1" Style="{StaticResource PulseSlider}" Minimum="0" Maximum="100" ValueChanged="Volume_Changed" Margin="9,0" AutomationProperties.Name="System volume" />
-       <TextBlock x:Name="VolumeText" Grid.Column="2" Text="--" FontSize="10" Foreground="#75757A" HorizontalAlignment="Right" VerticalAlignment="Center" />
+       <TextBlock x:Name="VolumeText" Grid.Column="2" Text="--" FontSize="10" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
       </Grid>
       <TextBlock Text="Brightness" Style="{StaticResource SectionLabel}" Margin="0,12,0,0" />
-      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="34" /></Grid.ColumnDefinitions><Slider x:Name="BrightnessSlider" Style="{StaticResource PulseSlider}" Minimum="0" Maximum="100" ValueChanged="Brightness_Changed" PreviewMouseLeftButtonUp="Brightness_MouseUp" PreviewKeyUp="Brightness_KeyUp" AutomationProperties.Name="Internal display brightness" /><TextBlock x:Name="BrightnessValue" Grid.Column="1" FontSize="10" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" /></Grid>
-      <TextBlock x:Name="BrightnessStatus" Text="Checking display support…" FontSize="9" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" />
+      <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="34" /></Grid.ColumnDefinitions><Slider x:Name="BrightnessSlider" Style="{StaticResource PulseSlider}" Minimum="0" Maximum="100" ValueChanged="Brightness_Changed" PreviewMouseLeftButtonUp="Brightness_MouseUp" PreviewKeyUp="Brightness_KeyUp" AutomationProperties.Name="Internal display brightness" /><TextBlock x:Name="BrightnessValue" Grid.Column="1" FontSize="10" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" /></Grid>
+      <TextBlock x:Name="BrightnessStatus" Text="Checking display support…" FontSize="9" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" />
       <TextBlock Text="App launch slots" Style="{StaticResource SectionLabel}" Margin="0,14,0,6" />
       <ItemsControl x:Name="SettingsLaunchSlotsList" AutomationProperties.Name="Configure five application launch slots">
-       <ItemsControl.ItemTemplate><DataTemplate><Grid Height="34" Margin="0,0,0,3"><Grid.ColumnDefinitions><ColumnDefinition Width="24" /><ColumnDefinition Width="*" /><ColumnDefinition Width="58" /><ColumnDefinition Width="44" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Number}" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="10" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" /><Button Grid.Column="2" Content="{Binding ChooseLabel}" Style="{StaticResource GhostButton}" FontSize="9" Padding="3" MinHeight="28" Tag="{Binding}" Click="LaunchSlotChoose_Click" AutomationProperties.Name="{Binding ChooseAutomationName}" AutomationProperties.HelpText="{Binding Name}" /><Button Grid.Column="3" Content="Clear" Style="{StaticResource GhostButton}" FontSize="9" Padding="3" MinHeight="28" Tag="{Binding}" Click="LaunchSlotClear_Click" IsEnabled="{Binding IsConfigured}" AutomationProperties.Name="{Binding ClearAutomationName}" /></Grid></DataTemplate></ItemsControl.ItemTemplate>
+       <ItemsControl.ItemTemplate><DataTemplate><Grid Height="34" Margin="0,0,0,3"><Grid.ColumnDefinitions><ColumnDefinition Width="24" /><ColumnDefinition Width="*" /><ColumnDefinition Width="58" /><ColumnDefinition Width="44" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Number}" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="10" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" /><Button Grid.Column="2" Content="{Binding ChooseLabel}" Style="{StaticResource GhostButton}" FontSize="9" Padding="3" MinHeight="28" Tag="{Binding}" Click="LaunchSlotChoose_Click" AutomationProperties.Name="{Binding ChooseAutomationName}" AutomationProperties.HelpText="{Binding Name}" /><Button Grid.Column="3" Content="Clear" Style="{StaticResource GhostButton}" FontSize="9" Padding="3" MinHeight="28" Tag="{Binding}" Click="LaunchSlotClear_Click" IsEnabled="{Binding IsConfigured}" AutomationProperties.Name="{Binding ClearAutomationName}" /></Grid></DataTemplate></ItemsControl.ItemTemplate>
       </ItemsControl>
       <TextBlock Text="Notification privacy" Style="{StaticResource SectionLabel}" Margin="0,14,0,6" />
       <CheckBox x:Name="NotificationsCheck" Content="Enable notification previews" Style="{StaticResource PulseCheckBox}" Click="Notifications_Enable_Click" />
       <CheckBox x:Name="HideNotificationCheck" Content="Hide message content" Style="{StaticResource PulseCheckBox}" Click="NotificationPrivacy_Changed" />
       <CheckBox x:Name="AllNotificationsCheck" Content="Allow all apps" Style="{StaticResource PulseCheckBox}" Click="NotificationPrivacy_Changed" />
-      <ComboBox x:Name="NotificationAppChoice" DisplayMemberPath="Name" Background="{StaticResource PanelBrush}" Foreground="{StaticResource TextBrush}" MinHeight="28" Margin="0,6,0,4" AutomationProperties.Name="Notification app selection"><ComboBox.ItemContainerStyle><Style TargetType="ComboBoxItem"><Setter Property="Background" Value="{StaticResource PanelBrush}" /><Setter Property="Foreground" Value="{StaticResource TextBrush}" /></Style></ComboBox.ItemContainerStyle></ComboBox>
+      <ComboBox x:Name="NotificationAppChoice" DisplayMemberPath="Name" Background="{DynamicResource PanelBrush}" Foreground="{DynamicResource TextBrush}" MinHeight="28" Margin="0,6,0,4" AutomationProperties.Name="Notification app selection"><ComboBox.ItemContainerStyle><Style TargetType="ComboBoxItem"><Setter Property="Background" Value="{DynamicResource PanelBrush}" /><Setter Property="Foreground" Value="{DynamicResource TextBrush}" /></Style></ComboBox.ItemContainerStyle></ComboBox>
       <Grid><Button Content="Allow selected app" Style="{StaticResource GhostButton}" HorizontalAlignment="Left" Click="NotificationApp_Add_Click" /><Button Content="Remove selected" Style="{StaticResource GhostButton}" HorizontalAlignment="Right" Click="NotificationApp_Remove_Click" /></Grid>
-      <TextBlock x:Name="NotificationStatus" Text="Off. No notification access requested." FontSize="9" Foreground="{StaticResource MutedBrush}" TextWrapping="Wrap" Margin="0,4,0,8" />
+      <TextBlock x:Name="NotificationStatus" Text="Off. No notification access requested." FontSize="9" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,4,0,8" />
      </StackPanel>
      </ScrollViewer>
      <Grid Grid.Row="2">
-      <TextBlock x:Name="SettingsStatus" Text="Local. No account. No telemetry." FontSize="9" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" />
+      <TextBlock x:Name="SettingsStatus" Text="Local. No account. No telemetry." FontSize="9" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" />
       <TextBlock x:Name="ShortcutText" Visibility="Collapsed" />
       <Button Content="Quit" Style="{StaticResource GhostButton}" HorizontalAlignment="Right" MinHeight="28" Click="Quit_Click" />
      </Grid>
     </Grid>
-    <Grid x:Name="AppCatalogPanel" Visibility="Collapsed" Opacity="0" Margin="20,16,20,14">
+    <Grid x:Name="AppCatalogPanel" Visibility="Collapsed" Opacity="1" Margin="20,16,20,14">
      <Grid.RowDefinitions><RowDefinition Height="42" /><RowDefinition Height="36" /><RowDefinition Height="24" /><RowDefinition Height="*" /><RowDefinition Height="38" /><RowDefinition Height="32" /></Grid.RowDefinitions>
-     <Grid><StackPanel VerticalAlignment="Center"><TextBlock x:Name="AppCatalogTitle" Text="Choose an app" FontSize="17" FontWeight="SemiBold" /><TextBlock Text="Installed apps on this Windows account" FontSize="10" Foreground="{StaticResource MutedBrush}" /></StackPanel><Button Style="{StaticResource IconButton}" Content="&#xE72B;" HorizontalAlignment="Right" Click="AppCatalog_Back_Click" ToolTip="Back" AutomationProperties.Name="Back to Settings" /></Grid>
-     <TextBox x:Name="AppCatalogSearch" Grid.Row="1" Background="{StaticResource PanelBrush}" Foreground="{StaticResource TextBrush}" BorderBrush="{StaticResource LineBrush}" Padding="10,5" TextChanged="AppCatalogSearch_Changed" AutomationProperties.Name="Search installed apps" />
-     <TextBlock x:Name="AppCatalogStatus" Grid.Row="2" Text="Choose a slot to load installed apps." FontSize="9" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-     <ListBox x:Name="AppCatalogResults" Grid.Row="3" Background="Transparent" BorderThickness="0" Foreground="{StaticResource TextBrush}" SelectionChanged="AppCatalogSelection_Changed" ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" AutomationProperties.Name="Installed app results">
-      <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0,0,0,4" /><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="Row" Background="{StaticResource PanelBrush}" CornerRadius="10" Padding="8,5"><ContentPresenter /></Border><ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="Row" Property="Background" Value="{StaticResource PanelHoverBrush}" /></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style></ListBox.ItemContainerStyle>
-      <ListBox.ItemTemplate><DataTemplate><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28" /><ColumnDefinition Width="*" /><ColumnDefinition Width="80" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Glyph}" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" /><TextBlock Grid.Column="2" Text="{Binding Source}" FontSize="9" Foreground="{StaticResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" /></Grid></DataTemplate></ListBox.ItemTemplate>
+     <Grid><StackPanel VerticalAlignment="Center"><TextBlock x:Name="AppCatalogTitle" Text="Choose an app" FontSize="17" FontWeight="SemiBold" /><TextBlock Text="Installed apps on this Windows account" FontSize="10" Foreground="{DynamicResource MutedBrush}" /></StackPanel><Button Style="{StaticResource IconButton}" Content="&#xE72B;" HorizontalAlignment="Right" Click="AppCatalog_Back_Click" ToolTip="Back" AutomationProperties.Name="Back to Settings" /></Grid>
+     <TextBox x:Name="AppCatalogSearch" Grid.Row="1" Background="{DynamicResource PanelBrush}" Foreground="{DynamicResource TextBrush}" BorderBrush="{DynamicResource LineBrush}" Padding="10,5" TextChanged="AppCatalogSearch_Changed" AutomationProperties.Name="Search installed apps" />
+     <TextBlock x:Name="AppCatalogStatus" Grid.Row="2" Text="Choose a slot to load installed apps." FontSize="9" Foreground="{DynamicResource MutedBrush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+     <ListBox x:Name="AppCatalogResults" Grid.Row="3" Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextBrush}" SelectionChanged="AppCatalogSelection_Changed" ScrollViewer.HorizontalScrollBarVisibility="Disabled" VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling" AutomationProperties.Name="Installed app results">
+      <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0,0,0,4" /><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="Row" Background="{DynamicResource PanelBrush}" CornerRadius="10" Padding="8,5"><ContentPresenter /></Border><ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="Row" Property="Background" Value="{DynamicResource PanelHoverBrush}" /></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style></ListBox.ItemContainerStyle>
+      <ListBox.ItemTemplate><DataTemplate><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="28" /><ColumnDefinition Width="*" /><ColumnDefinition Width="80" /></Grid.ColumnDefinitions><TextBlock Text="{Binding Glyph}" FontFamily="Segoe Fluent Icons" FontSize="15" VerticalAlignment="Center" /><TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="11" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" /><TextBlock Grid.Column="2" Text="{Binding Source}" FontSize="9" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" /></Grid></DataTemplate></ListBox.ItemTemplate>
      </ListBox>
      <Button x:Name="AppCatalogAddButton" Grid.Row="4" Content="Add to slot" Style="{StaticResource AccentButton}" IsEnabled="False" Click="AppCatalog_Add_Click" AutomationProperties.Name="Add selected app to slot" />
      <Grid Grid.Row="5"><Button Content="Refresh" Style="{StaticResource GhostButton}" FontSize="9" HorizontalAlignment="Left" Click="AppCatalog_Refresh_Click" AutomationProperties.Name="Refresh installed app list" /><Button Content="Advanced browse" Style="{StaticResource GhostButton}" FontSize="9" HorizontalAlignment="Right" Click="AppCatalog_AdvancedBrowse_Click" AutomationProperties.Name="Advanced browse for application" /></Grid>

@@ -22,28 +22,39 @@ public partial class MainWindow : Window
     private readonly AudioService _audio = new();
     private readonly MediaService _media = new();
     private readonly DispatcherTimer _tick = new() { Interval = TimeSpan.FromSeconds(1) };
-    private readonly DispatcherTimer _hover = new() { Interval = TimeSpan.FromMilliseconds(240) };
+    private readonly DispatcherTimer _hover = new() { Interval = TimeSpan.FromMilliseconds(120) };
     private readonly DispatcherTimer _leave = new() { Interval = TimeSpan.FromMilliseconds(800) };
+    private readonly DispatcherTimer _edgeHide = new();
     private TrayService? _tray;
     private HotkeyService? _hotkey;
     private AppSlotHotkeyService? _appSlotHotkeys;
     private IntPtr _handle;
     private Rect _monitor;
     private bool _ready, _updating, _pinned, _userHidden, _closed;
+    private bool _edgeTriggerArmed = true, _pointerInEdgeEngagementZone, _hoverRequiresReentry;
+    private int _edgeTransitionVersion;
+    private EdgePhase _edgePhase = EdgePhase.Visible;
+    private FrameworkElement? _presentedModePanel;
+    private DateTimeOffset _edgeRevealGraceUntil;
     private BatterySnapshot? _battery;
     private float? _lastVolume;
     private string? _notice;
     private DateTimeOffset _noticeUntil;
     private int _ticks;
     private Activity _activity = Activity.Music;
-    private bool _activityChosen, _waveAnimating;
+    private bool _activityChosen, _waveAnimating, _updatingActivityTabs;
     private double _targetWidth = 140, _targetHeight = 36;
 
     public MainWindow()
     {
         _settings = SettingsStore.Load();
+        ((App)Application.Current).ApplyVisualMode(_settings.VisualMode);
         InitializeComponent();
         ApplyRailVisibility();
+        Island.SizeChanged += (_, _) =>
+        {
+            if (_ready && _settings.DockPosition != IslandDockPosition.TopCenter) PositionIsland();
+        };
         _monitor = EnvironmentService.PrimaryScreenBounds();
         IsVisibleChanged += (_, _) => UpdatePlaybackAnimation();
         _hotkey = new HotkeyService(this, ToggleFromShortcut);
@@ -70,12 +81,19 @@ public partial class MainWindow : Window
                 () => Dispatcher.Invoke(OpenSettings), () => Dispatcher.Invoke(Quit));
             ShortcutText.Text = _hotkey.IsRegistered ? "Ctrl + Alt + Space" : "Shortcut unavailable · use tray";
             _tick.Tick += Tick;
-            _hover.Tick += (_, _) => { _hover.Stop(); if (Island.IsMouseOver && _state.Mode == IslandMode.Compact && _notice == null) Expand(false); };
+            _hover.Tick += (_, _) =>
+            {
+                _hover.Stop();
+                if (!_hoverRequiresReentry && _edgePhase == EdgePhase.Visible && Island.IsMouseOver
+                    && _settings.HoverExpand && _state.Mode == IslandMode.Compact && _notice == null) Expand(false);
+            };
             _leave.Tick += (_, _) => { _leave.Stop(); if (!IsPointerOverInteractiveChrome() && !_pinned && !_featuresModal && !_dropHover && !_shelfDragging) Collapse(); };
+            _edgeHide.Tick += (_, _) => { _edgeHide.Stop(); HideAtScreenEdge(); };
             _focus.Completed += (_, _) =>
             {
                 SavePreferences();
                 Notify("Focus complete", "Take a little breather.", 12);
+                ReactHearts();
             };
             RestoreFocusState();
             PollLocalState();
@@ -88,11 +106,15 @@ public partial class MainWindow : Window
                 SavePreferences();
                 Expand(true);
             }
+            else
+            {
+                ScheduleEdgeHide(1400);
+            }
         };
         Closed += (_, _) =>
         {
             _closed = true;
-            _tick.Stop(); _hover.Stop(); _leave.Stop();
+            _tick.Stop(); _hover.Stop(); _leave.Stop(); _edgeHide.Stop();
             ShutdownEyes();
             SavePreferences();
             DisposeFeatures();
@@ -119,9 +141,9 @@ public partial class MainWindow : Window
         await TickFeaturesAsync();
         if (_closed) return;
         bool fullscreen = _settings.HideInFullscreen && EnvironmentService.IsFullscreenAppActive(_handle, _monitor);
-        bool shouldShow = !_userHidden && !fullscreen;
+        bool shouldShow = !_userHidden && !fullscreen && _edgePhase != EdgePhase.Hidden;
         if (shouldShow && !IsVisible) Show();
-        else if (!shouldShow && IsVisible) Hide();
+        else if (!shouldShow && IsVisible && _edgePhase != EdgePhase.Retreating) Hide();
         if (_ticks % 5 == 0)
         {
             var monitors = EnvironmentService.AllScreenBounds();
@@ -163,6 +185,7 @@ public partial class MainWindow : Window
         PreviousButton.IsEnabled = media.CanPrevious;
         NextButton.IsEnabled = media.CanNext;
         ExpandedArtwork.Source = CompactArtwork.Source = SatelliteArtwork.Source = media.Artwork;
+        UpdateArtworkAccent(media.Artwork);
         ArtworkFallback.Visibility = SatelliteFallback.Visibility = media.Artwork == null ? Visibility.Visible : Visibility.Collapsed;
         if (!_activityChosen && !_focus.IsRunning && !_focus.IsPaused)
             _activity = media.HasSession ? Activity.Music : Activity.Focus;
@@ -198,11 +221,18 @@ public partial class MainWindow : Window
     private void UpdateActivity()
     {
         var activities = new[] { (Activity.Music, MusicActivity, MusicTab), (Activity.Focus, TimerActivity, FocusTab), (Activity.Shelf, ShelfActivity, FilesTab), (Activity.Calendar, CalendarActivity, CalendarTab), (Activity.Inbox, InboxActivity, InboxTab), (Activity.Tools, ToolsActivity, ToolsTab) };
-        foreach (var (kind, panel, button) in activities)
+        _updatingActivityTabs = true;
+        try
         {
-            panel.Visibility = _activity == kind ? Visibility.Visible : Visibility.Collapsed;
-            button.Foreground = (Brush)FindResource(_activity == kind ? kind == Activity.Focus ? "TimerBrush" : "TextBrush" : "MutedBrush");
+            foreach (var (kind, panel, button) in activities)
+            {
+                bool selected = _activity == kind;
+                panel.Visibility = selected ? Visibility.Visible : Visibility.Collapsed;
+                button.Tag = selected;
+                button.Foreground = (Brush)FindResource(selected ? kind == Activity.Focus ? "TimerBrush" : "TextBrush" : "MutedBrush");
+            }
         }
+        finally { _updatingActivityTabs = false; }
         HeaderSubtitle.Text = _notice ?? (_activity switch
         {
             Activity.Focus => "Focus",
@@ -216,15 +246,23 @@ public partial class MainWindow : Window
 
     private void SetActivity(Activity activity)
     {
+        if (_activity == activity)
+        {
+            _activityChosen = true;
+            UpdateActivity();
+            return;
+        }
+        int direction = activity > _activity ? 16 : -16;
         _activity = activity;
         _activityChosen = true;
         UpdateActivity();
         var panel = activity switch { Activity.Focus => TimerActivity, Activity.Shelf => ShelfActivity, Activity.Calendar => CalendarActivity, Activity.Inbox => InboxActivity, Activity.Tools => ToolsActivity, _ => MusicActivity };
         UpdateExpandedSizing();
-        panel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(_settings.ReducedMotion ? 0 : 160)));
+        if (_state.Mode == IslandMode.Expanded) AnimatePanelIn(panel, direction);
+        ReactCurious();
     }
-    private void MusicTab_Click(object sender, RoutedEventArgs e) => SetActivity(Activity.Music);
-    private void FocusTab_Click(object sender, RoutedEventArgs e) => SetActivity(Activity.Focus);
+    private void MusicTab_Click(object sender, RoutedEventArgs e) { if (!_updatingActivityTabs) SetActivity(Activity.Music); }
+    private void FocusTab_Click(object sender, RoutedEventArgs e) { if (!_updatingActivityTabs) SetActivity(Activity.Focus); }
     private void Satellite_Click(object sender, RoutedEventArgs e) { SetActivity(Activity.Music); Expand(true); }
 
     private void UpdateAudio()
@@ -288,6 +326,7 @@ public partial class MainWindow : Window
             _settings.FocusDeadlineUtc = null;
             SavePreferences();
             Notify("Focus complete", "The timer finished while Vajra Pulse was closed.", 8);
+            ReactHearts();
             return;
         }
 
@@ -335,9 +374,10 @@ public partial class MainWindow : Window
             double width = notice ? live ? 300 : 320 : focus ? 184 : mediaPresent ? 176 : _settings.ShowClock ? 140 : 124;
             CompactRow.Width = width - 20;
             ResizeIsland(width, notice ? live ? 52 : 42 : 36);
-            SatellitePosition.X = -(width / 2 + 22);
+            ApplyAccessoryLayout(width);
         }
         SatelliteButton.Visibility = _state.Mode == IslandMode.Compact && focus && mediaPresent && !notice ? Visibility.Visible : Visibility.Collapsed;
+        UpdateCompactProgressRing(notice, focus, mediaPresent);
         UpdateActivity();
         UpdatePlaybackAnimation();
         FlushEyeEmotion();
@@ -371,14 +411,16 @@ public partial class MainWindow : Window
         }
         bool tools = _activity == Activity.Tools;
         ExpandedContentRow.Height = new GridLength(tools ? 242 : 122);
-        ResizeIsland(400, tools ? 430 : 310);
+        ResizeIsland(460, tools ? 365 : 260);
     }
 
     private void ResizeIsland(double width, double height)
     {
-        SideRailPosition.X = width / 2 + 22;
-        if (_targetWidth != width) { _targetWidth = width; Animate(Island, WidthProperty, width); }
+        bool widthChanged = _targetWidth != width;
+        ApplyAccessoryLayout(width);
+        if (widthChanged) { _targetWidth = width; Animate(Island, WidthProperty, width); }
         if (_targetHeight != height) { _targetHeight = height; Animate(Island, HeightProperty, height); }
+        if (widthChanged && _ready && _settings.DockPosition != IslandDockPosition.TopCenter) PositionIsland();
     }
 
     private void Notify(string title, string detail, int seconds)
@@ -394,6 +436,8 @@ public partial class MainWindow : Window
 
     private void Expand(bool pinned)
     {
+        _edgeHide.Stop();
+        if (_edgePhase != EdgePhase.Visible) ForceEdgeVisible();
         _leave.Stop(); _hover.Stop();
         _pinned = pinned;
         _state.Expand();
@@ -405,11 +449,13 @@ public partial class MainWindow : Window
         _pinned = false;
         _state.Collapse();
         ApplyMode();
+        ScheduleEdgeHide(650);
     }
     private void OpenSettings()
     {
+        _edgeHide.Stop();
         _userHidden = false;
-        Show();
+        ForceEdgeVisible();
         _pinned = true;
         _catalogOpen = false;
         _state.OpenSettings();
@@ -426,26 +472,84 @@ public partial class MainWindow : Window
         ExpandedPanel.Visibility = !compact && !settings ? Visibility.Visible : Visibility.Collapsed;
         SettingsPanel.Visibility = settings && !_catalogOpen ? Visibility.Visible : Visibility.Collapsed;
         AppCatalogPanel.Visibility = settings && _catalogOpen ? Visibility.Visible : Visibility.Collapsed;
+        FrameworkElement? desiredPanel = compact ? null : settings ? _catalogOpen ? AppCatalogPanel : SettingsPanel : ExpandedPanel;
         if (!compact) UpdateExpandedSizing();
         Island.CornerRadius = new CornerRadius(compact ? 24 : 32);
-        if (!compact)
-        {
-            var panel = settings ? _catalogOpen ? AppCatalogPanel : SettingsPanel : ExpandedPanel;
-            panel.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(_settings.ReducedMotion ? 0 : 180)) { BeginTime = TimeSpan.FromMilliseconds(_settings.ReducedMotion ? 0 : 90) });
-        }
+        if (desiredPanel != null && !ReferenceEquals(_presentedModePanel, desiredPanel)) AnimatePanelIn(desiredPanel, 0);
+        _presentedModePanel = desiredPanel;
         UpdateCompact();
+    }
+
+    private bool AnimationsEnabled => !_settings.ReducedMotion && SystemParameters.ClientAreaAnimation;
+
+    private void AnimatePanelIn(FrameworkElement panel, double fromX)
+    {
+        panel.BeginAnimation(OpacityProperty, null);
+        panel.SetValue(OpacityProperty, 1d);
+        var offset = panel.RenderTransform as TranslateTransform ?? new TranslateTransform();
+        panel.RenderTransform = offset;
+        offset.BeginAnimation(TranslateTransform.XProperty, null);
+        offset.X = 0;
+        if (!AnimationsEnabled) return;
+        var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(170))
+        {
+            FillBehavior = FillBehavior.Stop,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        var slide = new DoubleAnimation(fromX, 0, TimeSpan.FromMilliseconds(190))
+        {
+            FillBehavior = FillBehavior.Stop,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        panel.BeginAnimation(OpacityProperty, fade, HandoffBehavior.SnapshotAndReplace);
+        offset.BeginAnimation(TranslateTransform.XProperty, slide, HandoffBehavior.SnapshotAndReplace);
     }
 
     private void Animate(FrameworkElement target, DependencyProperty property, double to)
     {
-        if (_settings.ReducedMotion)
+        double from = (double)target.GetValue(property);
+        target.BeginAnimation(property, null);
+        target.SetValue(property, to);
+        if (!AnimationsEnabled || Math.Abs(from - to) < 0.01) return;
+        target.BeginAnimation(property, new DoubleAnimation(from, to, TimeSpan.FromMilliseconds(220))
         {
-            target.BeginAnimation(property, null);
-            target.SetValue(property, to);
-            return;
+            FillBehavior = FillBehavior.Stop,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        }, HandoffBehavior.SnapshotAndReplace);
+    }
+
+    private void AnimateTransform(TranslateTransform target, DependencyProperty property, double to)
+    {
+        double from = (double)target.GetValue(property);
+        target.BeginAnimation(property, null);
+        target.SetValue(property, to);
+        if (!AnimationsEnabled || Math.Abs(from - to) < 0.01) return;
+        target.BeginAnimation(property, new DoubleAnimation(from, to, TimeSpan.FromMilliseconds(220))
+        {
+            FillBehavior = FillBehavior.Stop,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        }, HandoffBehavior.SnapshotAndReplace);
+    }
+
+    private void ResetMotionState()
+    {
+        Island.BeginAnimation(WidthProperty, null);
+        Island.BeginAnimation(HeightProperty, null);
+        Island.SetValue(WidthProperty, _targetWidth);
+        Island.SetValue(HeightProperty, _targetHeight);
+        WindowChrome.BeginAnimation(OpacityProperty, null);
+        WindowChrome.SetValue(OpacityProperty, 1d);
+        WindowChromeOffset.BeginAnimation(TranslateTransform.YProperty, null);
+        WindowChromeOffset.Y = 0;
+        if (_edgePhase == EdgePhase.Retreating)
+        {
+            _edgePhase = EdgePhase.Hidden;
+            Hide();
         }
-        target.BeginAnimation(property, new DoubleAnimation(to, TimeSpan.FromMilliseconds(440))
-        { EasingFunction = new SpringEase { EasingMode = EasingMode.EaseIn } });
+        else if (_edgePhase == EdgePhase.Revealing) _edgePhase = EdgePhase.Visible;
+        ApplyAccessoryLayout(_targetWidth);
+        ResetEyeMotion();
+        UpdatePlaybackAnimation();
     }
 
     private void LoadPreferences()
@@ -459,6 +563,8 @@ public partial class MainWindow : Window
         BluetoothRailCheck.IsChecked = _settings.ShowBluetoothRailButton;
         WifiRailCheck.IsChecked = _settings.ShowWifiRailButton;
         ApplyRailVisibility();
+        ApplyEyeStyle();
+        LoadDesignPreferences();
         StartupRegistration startup = StartupService.Read();
         StartWithWindowsCheck.IsChecked = startup.IsEnabled;
         StartWithWindowsCheck.IsEnabled = startup.IsAvailable;
@@ -479,11 +585,148 @@ public partial class MainWindow : Window
             : saved ? "Saved locally. No account. No telemetry." : "Could not save preferences.";
         return saved;
     }
+
+    private void ScheduleEdgeHide(int delayMilliseconds)
+    {
+        if (!_ready || _closed || _userHidden || _edgePhase != EdgePhase.Visible || _state.Mode != IslandMode.Compact) return;
+        int graceRemaining = (int)Math.Ceiling((_edgeRevealGraceUntil - DateTimeOffset.UtcNow).TotalMilliseconds);
+        _edgeHide.Interval = TimeSpan.FromMilliseconds(Math.Max(100, Math.Max(delayMilliseconds, graceRemaining)));
+        _edgeHide.Stop();
+        _edgeHide.Start();
+    }
+
+    private void HideAtScreenEdge()
+    {
+        if (!_ready || _closed || _userHidden || _edgePhase != EdgePhase.Visible || _state.Mode != IslandMode.Compact) return;
+        if (_pointerInEdgeEngagementZone || IsPointerOverInteractiveChrome() || _featuresModal || _dropHover || _shelfDragging)
+        {
+            ScheduleEdgeHide(500);
+            return;
+        }
+        if (DateTimeOffset.UtcNow < _edgeRevealGraceUntil)
+        {
+            ScheduleEdgeHide(200);
+            return;
+        }
+
+        _edgeHide.Stop();
+        _hover.Stop();
+        _leave.Stop();
+        if (EyesOnScreen()) PlaySleepy();
+        _edgePhase = EdgePhase.Retreating;
+        int version = ++_edgeTransitionVersion;
+        void CompleteRetreat()
+        {
+            if (_closed || version != _edgeTransitionVersion || _edgePhase != EdgePhase.Retreating) return;
+            _edgePhase = EdgePhase.Hidden;
+            Hide();
+            WindowChrome.BeginAnimation(OpacityProperty, null);
+            WindowChrome.SetValue(OpacityProperty, 1d);
+            WindowChromeOffset.BeginAnimation(TranslateTransform.YProperty, null);
+            WindowChromeOffset.Y = 0;
+        }
+        if (!AnimationsEnabled)
+        {
+            CompleteRetreat();
+            return;
+        }
+
+        double fromOpacity = WindowChrome.Opacity;
+        double fromY = WindowChromeOffset.Y;
+        WindowChrome.BeginAnimation(OpacityProperty, null);
+        WindowChrome.SetValue(OpacityProperty, 0d);
+        WindowChromeOffset.BeginAnimation(TranslateTransform.YProperty, null);
+        WindowChromeOffset.Y = -6;
+        var fade = new DoubleAnimation(fromOpacity, 0, TimeSpan.FromMilliseconds(120))
+        {
+            FillBehavior = FillBehavior.Stop,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+        };
+        var slide = new DoubleAnimation(fromY, -6, TimeSpan.FromMilliseconds(120))
+        {
+            FillBehavior = FillBehavior.Stop,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+        };
+        fade.Completed += (_, _) => CompleteRetreat();
+        WindowChrome.BeginAnimation(OpacityProperty, fade, HandoffBehavior.SnapshotAndReplace);
+        WindowChromeOffset.BeginAnimation(TranslateTransform.YProperty, slide, HandoffBehavior.SnapshotAndReplace);
+    }
+
+    private void CheckScreenEdgeReveal(int pointerX, int pointerY)
+    {
+        if (_userHidden || _closed) return;
+        double scale = _handle == IntPtr.Zero ? 1 : Math.Max(96, GetDpiForWindow(_handle)) / 96d;
+        double centerX = CalculateRevealCenter(scale);
+        double dx = Math.Abs(pointerX - centerX);
+        bool inActivationZone = pointerY >= _monitor.Top && pointerY <= _monitor.Top + Math.Max(3, 4 * scale)
+            && dx <= Math.Max(120, _targetWidth / 2 + 8) * scale;
+        bool inResetZone = pointerY >= _monitor.Top && pointerY <= _monitor.Top + Math.Max(10, 12 * scale)
+            && dx <= Math.Max(140, _targetWidth / 2 + 18) * scale;
+        _pointerInEdgeEngagementZone = inResetZone;
+        if (!inResetZone) _edgeTriggerArmed = true;
+        if (_edgePhase != EdgePhase.Hidden || !_edgeTriggerArmed || !inActivationZone) return;
+        if (_settings.HideInFullscreen && EnvironmentService.IsFullscreenAppActive(_handle, _monitor)) return;
+        _edgeTriggerArmed = false;
+        RevealFromScreenEdge();
+    }
+
+    private void RevealFromScreenEdge()
+    {
+        if (_edgePhase != EdgePhase.Hidden) return;
+        int version = ++_edgeTransitionVersion;
+        _edgePhase = EdgePhase.Revealing;
+        _edgeRevealGraceUntil = DateTimeOffset.UtcNow.AddMilliseconds(1300);
+        Show();
+        PositionIsland();
+        WindowChrome.BeginAnimation(OpacityProperty, null);
+        WindowChrome.SetValue(OpacityProperty, 1d);
+        WindowChromeOffset.BeginAnimation(TranslateTransform.YProperty, null);
+        WindowChromeOffset.Y = 0;
+        void CompleteReveal()
+        {
+            if (_closed || version != _edgeTransitionVersion || _edgePhase != EdgePhase.Revealing) return;
+            _edgePhase = EdgePhase.Visible;
+            ReactSurprised();
+            ScheduleEdgeHide(1300);
+        }
+        if (!AnimationsEnabled)
+        {
+            CompleteReveal();
+            return;
+        }
+        var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(160))
+        {
+            FillBehavior = FillBehavior.Stop,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        var slide = new DoubleAnimation(-6, 0, TimeSpan.FromMilliseconds(160))
+        {
+            FillBehavior = FillBehavior.Stop,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        fade.Completed += (_, _) => CompleteReveal();
+        WindowChrome.BeginAnimation(OpacityProperty, fade, HandoffBehavior.SnapshotAndReplace);
+        WindowChromeOffset.BeginAnimation(TranslateTransform.YProperty, slide, HandoffBehavior.SnapshotAndReplace);
+    }
+
+    private void ForceEdgeVisible()
+    {
+        ++_edgeTransitionVersion;
+        _edgeHide.Stop();
+        _edgePhase = EdgePhase.Visible;
+        WindowChrome.BeginAnimation(OpacityProperty, null);
+        WindowChrome.SetValue(OpacityProperty, 1d);
+        WindowChromeOffset.BeginAnimation(TranslateTransform.YProperty, null);
+        WindowChromeOffset.Y = 0;
+        if (!IsVisible) Show();
+        PositionIsland();
+    }
+
     private void PositionIsland()
     {
         if (_handle == IntPtr.Zero) return;
         double scale = Math.Max(96, GetDpiForWindow(_handle)) / 96d;
-        int left = (int)Math.Round(_monitor.Left + (_monitor.Width - Width * scale) / 2);
+        int left = CalculateWindowLeft(scale);
         int top = (int)Math.Round(_monitor.Top + (_settings.TopOffset - 8) * scale);
         SetWindowPos(_handle, new IntPtr(-1), left, top, 0, 0, 0x11);
     }
@@ -497,37 +740,59 @@ public partial class MainWindow : Window
     private void ToggleFromShortcut()
     {
         _userHidden = false;
-        if (!IsVisible) { Show(); Expand(true); Activate(); }
-        else if (_state.Mode == IslandMode.Compact) { Expand(true); Activate(); }
-        else Collapse();
+        ForceEdgeVisible();
+        if (_state.Mode == IslandMode.Compact) { Expand(true); Activate(); }
+        else { _hoverRequiresReentry = true; Collapse(); }
     }
     private void ToggleVisibility()
     {
-        _userHidden = !_userHidden;
-        if (_userHidden) Hide(); else { Show(); Collapse(); PositionIsland(); }
+        bool reveal = _userHidden || _edgePhase == EdgePhase.Hidden;
+        if (reveal)
+        {
+            _userHidden = false;
+            _edgeRevealGraceUntil = DateTimeOffset.UtcNow.AddMilliseconds(1300);
+            ForceEdgeVisible();
+            Collapse();
+            PositionIsland();
+        }
+        else
+        {
+            _userHidden = true;
+            ++_edgeTransitionVersion;
+            _edgeHide.Stop();
+            Hide();
+        }
     }
     private bool IsPointerOverInteractiveChrome() => Island.IsMouseOver || SideRail.IsMouseOver || SatelliteButton.IsMouseOver;
-    private void InteractiveChrome_MouseEnter(object sender, MouseEventArgs e) => _leave.Stop();
+    private void InteractiveChrome_MouseEnter(object sender, MouseEventArgs e)
+    {
+        _edgeHide.Stop();
+        _leave.Stop();
+    }
     private void InteractiveChrome_MouseLeave(object sender, MouseEventArgs e)
     {
         if (!_pinned && _state.Mode == IslandMode.Expanded) { _leave.Stop(); _leave.Start(); }
+        else if (_state.Mode == IslandMode.Compact) ScheduleEdgeHide(500);
     }
     private void Island_MouseEnter(object sender, MouseEventArgs e)
     {
+        _edgeHide.Stop();
         _leave.Stop();
         if (_settings.HoverExpand && _state.Mode == IslandMode.Compact) { _hover.Stop(); _hover.Start(); }
     }
     private void Island_MouseLeave(object sender, MouseEventArgs e)
     {
         _hover.Stop();
+        _hoverRequiresReentry = false;
         if (!_pinned && _state.Mode == IslandMode.Expanded) { _leave.Stop(); _leave.Start(); }
+        else if (_state.Mode == IslandMode.Compact) ScheduleEdgeHide(500);
     }
     private void Compact_Click(object sender, RoutedEventArgs e) => Expand(true);
-    private void Collapse_Click(object sender, RoutedEventArgs e) => Collapse();
+    private void Collapse_Click(object sender, RoutedEventArgs e) { _hoverRequiresReentry = true; Collapse(); }
     private void Settings_Click(object sender, RoutedEventArgs e) => OpenSettings();
     private void Island_RightClick(object sender, MouseButtonEventArgs e) { OpenSettings(); e.Handled = true; }
     private void Back_Click(object sender, RoutedEventArgs e) { FocusMinutes_LostFocus(sender, e); Expand(true); }
-    private void Window_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Escape) { if (_catalogOpen) CloseAppCatalog(); else Collapse(); e.Handled = true; } }
+    private void Window_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Escape) { if (_catalogOpen) CloseAppCatalog(); else { _hoverRequiresReentry = true; Collapse(); } e.Handled = true; } }
     private void Window_Deactivated(object? sender, EventArgs e)
     {
         if (_ready && _state.Mode != IslandMode.Compact) { _pinned = false; _leave.Start(); }
@@ -591,7 +856,10 @@ public partial class MainWindow : Window
         _settings.ShowSystemRailButton = SystemRailCheck.IsChecked == true;
         _settings.ShowBluetoothRailButton = BluetoothRailCheck.IsChecked == true;
         _settings.ShowWifiRailButton = WifiRailCheck.IsChecked == true;
+        _settings.UseArtworkAccent = ArtworkAccentCheck.IsChecked == true;
         ApplyRailVisibility();
+        UpdateArtworkAccent(_media.Snapshot.Artwork);
+        if (_settings.ReducedMotion) ResetMotionState();
         SavePreferences(); ApplyMode();
     }
     private void Startup_Changed(object sender, RoutedEventArgs e)
@@ -630,30 +898,9 @@ public partial class MainWindow : Window
     private void Test_Click(object sender, RoutedEventArgs e) => TestLiveState();
     private void Quit_Click(object sender, RoutedEventArgs e) => Quit();
     private enum Activity { Music, Focus, Shelf, Calendar, Inbox, Tools }
+    private enum EdgePhase { Visible, Retreating, Hidden, Revealing }
     private void Quit() => Close();
 
-    private void SetTheme(string theme)
-    {
-        ResourceDictionary newTheme = new ResourceDictionary { Source = new Uri($"UI/{theme}Theme.xaml", UriKind.Relative) };
-        Application.Current.Resources.MergedDictionaries.Remove(Application.Current.Resources.MergedDictionaries.FirstOrDefault(d => d.Source != null && d.Source.ToString().EndsWith("Theme.xaml")));
-        Application.Current.Resources.MergedDictionaries.Add(newTheme);
-    }
-    
-    private void DarkTheme_Click(object sender, RoutedEventArgs e) => SetTheme("Dark");
-    private void LightTheme_Click(object sender, RoutedEventArgs e) => SetTheme("Light");
-    private void GlassTheme_Click(object sender, RoutedEventArgs e) => SetTheme("Glass");
-    
     [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr hwnd);
     [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetWindowPos(IntPtr hwnd, IntPtr insertAfter, int x, int y, int width, int height, uint flags);
-}
-
-public sealed class SpringEase : EasingFunctionBase
-{
-    protected override double EaseInCore(double t)
-    {
-        if (t <= 0) return 0;
-        if (t >= 1) return 1;
-        return 1 - Math.Exp(-9 * t) * Math.Cos(9 * t);
-    }
-    protected override Freezable CreateInstanceCore() => new SpringEase();
 }

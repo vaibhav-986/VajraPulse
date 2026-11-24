@@ -9,6 +9,7 @@ var tests = new (string Name, Action Run)[]
     ("CPU reset is warming up", TestCpuReset),
     ("Wi-Fi state aggregation", TestWifiAggregation),
     ("Settings migrate to five slots", TestSettingsMigration),
+    ("Design settings normalize and round-trip", TestDesignSettings),
     ("Future settings are not overwritten", TestFutureSettings),
     ("Launcher validates local explicit targets", TestLauncherValidation),
     ("Launcher routes explicit target kinds", TestLauncherKinds),
@@ -80,6 +81,29 @@ static void TestSettingsMigration()
         Assert(reloaded.LaunchSlots.Length == 5 && reloaded.LaunchSlots[2].DisplayName == "Editor", "Slot order should round-trip.");
         Assert(!reloaded.ShowBluetoothRailButton && reloaded.ShowSystemRailButton && reloaded.ShowWifiRailButton, "Rail options should round-trip independently.");
         Assert(reloaded.LaunchSlots[3].TargetKind == AppLaunchTargetKind.AppUserModelId && reloaded.LaunchSlots[3].AppUserModelId.Contains("Calculator"), "Packaged app targets should round-trip.");
+    }
+    finally { Directory.Delete(directory, true); }
+}
+
+static void TestDesignSettings()
+{
+    string directory = MakeTempDirectory();
+    try
+    {
+        string path = Path.Combine(directory, "settings.json");
+        File.WriteAllText(path, "{\"SchemaVersion\":2,\"VisualMode\":\"Unknown\",\"EyeStyle\":\"Nope\",\"DockPosition\":999}");
+        PulseSettings normalized = SettingsStore.Load(path);
+        Assert(normalized.SchemaVersion == SettingsStore.CurrentSchemaVersion, "Design settings should migrate to schema 3.");
+        Assert(normalized.VisualMode == "Cute" && normalized.EyeStyle == "Googly", "Unknown visual selections should use safe defaults.");
+        Assert(normalized.DockPosition == IslandDockPosition.TopCenter, "An invalid dock value should normalize to top center.");
+        normalized.VisualMode = "Neon";
+        normalized.EyeStyle = "Starry";
+        normalized.DockPosition = IslandDockPosition.TopRight;
+        normalized.UseArtworkAccent = false;
+        Assert(SettingsStore.Save(normalized, path), "Design settings should save.");
+        PulseSettings reloaded = SettingsStore.Load(path);
+        Assert(reloaded.VisualMode == "Neon" && reloaded.EyeStyle == "Starry", "Visual selections should round-trip.");
+        Assert(reloaded.DockPosition == IslandDockPosition.TopRight && !reloaded.UseArtworkAccent, "Dock and artwork settings should round-trip.");
     }
     finally { Directory.Delete(directory, true); }
 }
@@ -181,12 +205,12 @@ static void TestVersionMetadata()
     string? version = project.Descendants("Version").SingleOrDefault()?.Value;
     string? fileVersion = project.Descendants("FileVersion").SingleOrDefault()?.Value;
     Console.WriteLine($"DEBUG: Version={version}, FileVersion={fileVersion}");
-    Assert(version == "1.4.0" && fileVersion == "1.4.0.0", "Project versions should be 1.4.");
+    Assert(version == "1.6.0" && fileVersion == "1.6.0.0", "Project versions should be 1.6.0.");
     XDocument package = XDocument.Load(Path.Combine(root, "packaging", "Package.appxmanifest"));
     XNamespace ns = "http://schemas.microsoft.com/appx/manifest/foundation/windows10";
     string? msixVersion = package.Root?.Element(ns + "Identity")?.Attribute("Version")?.Value;
     Console.WriteLine($"DEBUG: MSIXVersion={msixVersion}");
-    Assert(msixVersion == "1.4.0.0", "MSIX version should be 1.4.0.0.");
+    Assert(msixVersion == "1.6.0.0", "MSIX version should be 1.6.0.0.");
 }
 
 static void TestLiveTelemetry()

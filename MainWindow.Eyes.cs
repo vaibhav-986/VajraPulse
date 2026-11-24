@@ -5,6 +5,8 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Threading;
@@ -22,9 +24,10 @@ public partial class MainWindow
     private HashSet<int> _titledApps = new();
     private DateTimeOffset _eyeBusyUntil, _eyeReadyAt, _pendingEmotionUntil;
     private EyeEmotion _pendingEmotion;
+    private int _eyeReactionVersion;
     private bool _eyesStarted, _appWatcherBusy;
 
-    private enum EyeEmotion { None, Happy, Sad, Dizzy, Sleepy, Confused }
+    private enum EyeEmotion { None, Happy, Sad, Hearts, Curious, Surprised, Sleepy }
 
     [StructLayout(LayoutKind.Sequential)]
     private struct EyeCursorPoint
@@ -41,6 +44,7 @@ public partial class MainWindow
     {
         if (_eyesStarted) return;
         _eyesStarted = true;
+        ApplyEyeStyle();
         _eyeTracker.Tick += (_, _) => TrackCursor();
         _eyeBlink.Tick += (_, _) => Blink();
         _appWatcher.Tick += async (_, _) => await WatchAppsAsync();
@@ -58,9 +62,16 @@ public partial class MainWindow
 
     private void TrackCursor()
     {
-        if (_closed || !_ready || !IsLoaded || !IsVisible || DateTimeOffset.UtcNow < _eyeBusyUntil) return;
-        if (LeftEye.ActualWidth <= 0 || RightEye.ActualWidth <= 0) return;
+        if (_closed || !_ready || !IsLoaded) return;
         if (!GetCursorPos(out EyeCursorPoint cursor)) return;
+        CheckScreenEdgeReveal(cursor.X, cursor.Y);
+        if (_edgePhase != EdgePhase.Visible || !IsVisible || DateTimeOffset.UtcNow < _eyeBusyUntil) return;
+        if (!AnimationsEnabled)
+        {
+            LeftPupilOffset.X = LeftPupilOffset.Y = RightPupilOffset.X = RightPupilOffset.Y = 0;
+            return;
+        }
+        if (LeftEye.ActualWidth <= 0 || RightEye.ActualWidth <= 0) return;
 
         Point pointer = PointFromScreen(new Point(cursor.X, cursor.Y));
         Point leftCenter = LeftEye.TransformToAncestor(this).Transform(new Point(LeftEye.ActualWidth / 2, LeftEye.ActualHeight / 2));
@@ -81,6 +92,62 @@ public partial class MainWindow
         pupil.Y += (targetY - pupil.Y) * 0.45;
     }
 
+    private void EyeStyle_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updating) return;
+        if (sender is not FrameworkElement { Tag: string style } || style is not ("Googly" or "Kawaii" or "Starry")) return;
+        _settings.EyeStyle = style;
+        ApplyEyeStyle();
+        SavePreferences();
+        SettingsStatus.Text = $"{style} eyes selected.";
+    }
+
+    private void ApplyEyeStyle()
+    {
+        ResetEyeMotion();
+        string style = _settings.EyeStyle is "Kawaii" or "Starry" ? _settings.EyeStyle : "Googly";
+        bool kawaii = style == "Kawaii";
+        bool starry = style == "Starry";
+
+        Brush eyeFill = CreateEyeFill(style);
+        LeftEyeWhite.Fill = eyeFill;
+        RightEyeWhite.Fill = eyeFill;
+        LeftEyeWhite.Width = RightEyeWhite.Width = kawaii ? 20 : 22;
+        LeftEyeWhite.Height = RightEyeWhite.Height = kawaii ? 23 : 22;
+        LeftRoundPupilVisual.Width = RightRoundPupilVisual.Width = kawaii ? 13.5 : 11;
+        LeftRoundPupilVisual.Height = RightRoundPupilVisual.Height = kawaii ? 13.5 : 11;
+        LeftRoundPupilVisual.Visibility = RightRoundPupilVisual.Visibility = starry ? Visibility.Collapsed : Visibility.Visible;
+        LeftStarPupilVisual.Visibility = RightStarPupilVisual.Visibility = starry ? Visibility.Visible : Visibility.Collapsed;
+        KawaiiBlush.Visibility = kawaii ? Visibility.Visible : Visibility.Collapsed;
+
+        GooglyEyesButton.IsChecked = style == "Googly";
+        KawaiiEyesButton.IsChecked = kawaii;
+        StarryEyesButton.IsChecked = starry;
+        EyeCluster.ToolTip = style + " eyes";
+    }
+
+    private static Brush CreateEyeFill(string style)
+    {
+        (Color inner, Color middle, Color outer) = style switch
+        {
+            "Kawaii" => (Color.FromRgb(255, 255, 255), Color.FromRgb(255, 240, 247), Color.FromRgb(244, 205, 224)),
+            "Starry" => (Color.FromRgb(255, 255, 247), Color.FromRgb(247, 241, 255), Color.FromRgb(219, 207, 247)),
+            _ => (Color.FromRgb(255, 255, 255), Color.FromRgb(244, 244, 248), Color.FromRgb(217, 217, 227))
+        };
+        var brush = new RadialGradientBrush
+        {
+            GradientOrigin = new Point(0.35, 0.28),
+            Center = new Point(0.42, 0.36),
+            RadiusX = 0.8,
+            RadiusY = 0.8
+        };
+        brush.GradientStops.Add(new GradientStop(inner, 0));
+        brush.GradientStops.Add(new GradientStop(middle, 0.55));
+        brush.GradientStops.Add(new GradientStop(outer, 1));
+        brush.Freeze();
+        return brush;
+    }
+
     private void ScheduleBlink()
     {
         _eyeBlink.Interval = TimeSpan.FromMilliseconds(_eyeRandom.Next(2800, 6200));
@@ -90,7 +157,7 @@ public partial class MainWindow
     private void Blink()
     {
         _eyeBlink.Stop();
-        if (!_closed && _ready && IsVisible && !_settings.ReducedMotion && DateTimeOffset.UtcNow >= _eyeBusyUntil)
+        if (!_closed && _ready && IsVisible && AnimationsEnabled && DateTimeOffset.UtcNow >= _eyeBusyUntil)
         {
             BlinkEye(LeftEyeScale);
             BlinkEye(RightEyeScale);
@@ -131,14 +198,24 @@ public partial class MainWindow
         PlaySad();
     }
 
-    private bool EyesOnScreen() => IsVisible && _state.Mode == IslandMode.Compact;
+    private bool EyesOnScreen() => IsVisible && _edgePhase == EdgePhase.Visible && _state.Mode == IslandMode.Compact && _notice == null && EyeCluster.Visibility == Visibility.Visible;
 
-    private void QueueEmotion(EyeEmotion emotion)
+    private void QueueEmotion(EyeEmotion emotion, DateTimeOffset? expiresAt = null)
     {
-        if (DateTimeOffset.UtcNow < _eyeReadyAt) return;
+        if (DateTimeOffset.UtcNow < _eyeReadyAt && EmotionPriority(emotion) < EmotionPriority(EyeEmotion.Hearts)) return;
+        if (_pendingEmotion != EyeEmotion.None && EmotionPriority(emotion) < EmotionPriority(_pendingEmotion)) return;
         _pendingEmotion = emotion;
-        _pendingEmotionUntil = DateTimeOffset.UtcNow.AddSeconds(4);
+        _pendingEmotionUntil = expiresAt ?? DateTimeOffset.UtcNow.AddSeconds(4);
     }
+
+    private static int EmotionPriority(EyeEmotion emotion) => emotion switch
+    {
+        EyeEmotion.Hearts => 4,
+        EyeEmotion.Happy or EyeEmotion.Sad => 3,
+        EyeEmotion.Surprised or EyeEmotion.Curious => 2,
+        EyeEmotion.Sleepy => 1,
+        _ => 0
+    };
 
     private void FlushEyeEmotion()
     {
@@ -150,15 +227,168 @@ public partial class MainWindow
         }
         EyeEmotion pending = _pendingEmotion;
         _pendingEmotion = EyeEmotion.None;
-        if (pending == EyeEmotion.Happy) PlayHappy();
-        else PlaySad();
+        switch (pending)
+        {
+            case EyeEmotion.Happy: PlayHappy(); break;
+            case EyeEmotion.Sad: PlaySad(); break;
+            case EyeEmotion.Hearts: PlayHearts(); break;
+            case EyeEmotion.Curious: PlayCurious(); break;
+            case EyeEmotion.Surprised: PlaySurprised(); break;
+            case EyeEmotion.Sleepy: PlaySleepy(); break;
+        }
+    }
+
+    private void ReactHearts()
+    {
+        DateTimeOffset expiry = (_noticeUntil > DateTimeOffset.UtcNow ? _noticeUntil : DateTimeOffset.UtcNow).AddSeconds(3);
+        if (!EyesOnScreen()) { QueueEmotion(EyeEmotion.Hearts, expiry); return; }
+        PlayHearts();
+    }
+
+    private void ReactCurious()
+    {
+        if (_closed || !_ready) return;
+        if (!EyesOnScreen()) { QueueEmotion(EyeEmotion.Curious); return; }
+        if (DateTimeOffset.UtcNow >= _eyeBusyUntil) PlayCurious();
+    }
+
+    private void ReactSurprised()
+    {
+        if (_closed || !_ready) return;
+        if (!EyesOnScreen()) { QueueEmotion(EyeEmotion.Surprised); return; }
+        if (DateTimeOffset.UtcNow >= _eyeBusyUntil) PlaySurprised();
+    }
+
+    private void Compact_PreviewLeftDown(object sender, MouseButtonEventArgs e) => ReactSurprised();
+    private void Compact_PreviewRightDown(object sender, MouseButtonEventArgs e) => ReactCurious();
+
+    private async void PlayHearts()
+    {
+        ResetEyeMotion();
+        int version = _eyeReactionVersion;
+        _eyeReadyAt = DateTimeOffset.UtcNow.AddMilliseconds(1550);
+        _eyeBusyUntil = DateTimeOffset.UtcNow.AddMilliseconds(1450);
+        LeftRoundPupilVisual.Opacity = RightRoundPupilVisual.Opacity = 0;
+        LeftStarPupilVisual.Opacity = RightStarPupilVisual.Opacity = 0;
+        LeftHeartPupilVisual.Opacity = RightHeartPupilVisual.Opacity = 1;
+        if (AnimationsEnabled)
+        {
+            var pop = new DoubleAnimationUsingKeyFrames { FillBehavior = FillBehavior.Stop };
+            pop.KeyFrames.Add(new EasingDoubleKeyFrame(0.75, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            pop.KeyFrames.Add(new EasingDoubleKeyFrame(1.12, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(220)), new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.35 }));
+            pop.KeyFrames.Add(new EasingDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(420)), new CubicEase { EasingMode = EasingMode.EaseOut }));
+            LeftPupilScale.BeginAnimation(ScaleTransform.ScaleXProperty, pop);
+            LeftPupilScale.BeginAnimation(ScaleTransform.ScaleYProperty, pop.Clone());
+            RightPupilScale.BeginAnimation(ScaleTransform.ScaleXProperty, pop.Clone());
+            RightPupilScale.BeginAnimation(ScaleTransform.ScaleYProperty, pop.Clone());
+        }
+        await Task.Delay(1400);
+        if (!_closed && version == _eyeReactionVersion) ResetEyeMotion();
+    }
+
+    private async void PlayCurious()
+    {
+        ResetEyeMotion();
+        int version = _eyeReactionVersion;
+        _eyeBusyUntil = DateTimeOffset.UtcNow.AddMilliseconds(650);
+        LeftCuriousBrow.Opacity = 1;
+        RightEyeScale.ScaleY = 0.86;
+        if (AnimationsEnabled)
+        {
+            LeftPupilOffset.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(0, 2.2, TimeSpan.FromMilliseconds(170)) { AutoReverse = true, FillBehavior = FillBehavior.Stop });
+            RightPupilOffset.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(0, 2.2, TimeSpan.FromMilliseconds(170)) { AutoReverse = true, FillBehavior = FillBehavior.Stop });
+        }
+        else LeftPupilOffset.X = RightPupilOffset.X = 2.2;
+        await Task.Delay(620);
+        if (!_closed && version == _eyeReactionVersion) ResetEyeMotion();
+    }
+
+    private async void PlaySurprised()
+    {
+        ResetEyeMotion();
+        int version = _eyeReactionVersion;
+        _eyeBusyUntil = DateTimeOffset.UtcNow.AddMilliseconds(480);
+        if (AnimationsEnabled)
+        {
+            var grow = new DoubleAnimation(1, 1.1, TimeSpan.FromMilliseconds(120)) { AutoReverse = true, FillBehavior = FillBehavior.Stop };
+            var shrink = new DoubleAnimation(1, 0.68, TimeSpan.FromMilliseconds(120)) { AutoReverse = true, FillBehavior = FillBehavior.Stop };
+            LeftEyeScale.BeginAnimation(ScaleTransform.ScaleXProperty, grow);
+            LeftEyeScale.BeginAnimation(ScaleTransform.ScaleYProperty, grow.Clone());
+            RightEyeScale.BeginAnimation(ScaleTransform.ScaleXProperty, grow.Clone());
+            RightEyeScale.BeginAnimation(ScaleTransform.ScaleYProperty, grow.Clone());
+            LeftPupilScale.BeginAnimation(ScaleTransform.ScaleXProperty, shrink);
+            LeftPupilScale.BeginAnimation(ScaleTransform.ScaleYProperty, shrink.Clone());
+            RightPupilScale.BeginAnimation(ScaleTransform.ScaleXProperty, shrink.Clone());
+            RightPupilScale.BeginAnimation(ScaleTransform.ScaleYProperty, shrink.Clone());
+        }
+        else
+        {
+            LeftEyeScale.ScaleX = LeftEyeScale.ScaleY = RightEyeScale.ScaleX = RightEyeScale.ScaleY = 1.1;
+            LeftPupilScale.ScaleX = LeftPupilScale.ScaleY = RightPupilScale.ScaleX = RightPupilScale.ScaleY = 0.68;
+        }
+        await Task.Delay(440);
+        if (!_closed && version == _eyeReactionVersion) ResetEyeMotion();
+    }
+
+    private void PlaySleepy()
+    {
+        ResetEyeMotion();
+        _eyeBusyUntil = DateTimeOffset.UtcNow.AddMilliseconds(500);
+        LeftPupil.Opacity = RightPupil.Opacity = 0;
+        LeftSleepyLid.Opacity = RightSleepyLid.Opacity = 1;
+    }
+
+    private void ResetEyeMotion()
+    {
+        _eyeReactionVersion++;
+        foreach (ScaleTransform scale in new[] { LeftEyeScale, RightEyeScale, LeftPupilScale, RightPupilScale })
+        {
+            scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+            scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+            scale.ScaleX = scale.ScaleY = 1;
+        }
+        foreach (TranslateTransform offset in new[] { LeftPupilOffset, RightPupilOffset })
+        {
+            offset.BeginAnimation(TranslateTransform.XProperty, null);
+            offset.BeginAnimation(TranslateTransform.YProperty, null);
+            offset.X = offset.Y = 0;
+        }
+        EyeClusterOffset.BeginAnimation(TranslateTransform.YProperty, null);
+        EyeClusterOffset.Y = 0;
+        LeftTearOffset.BeginAnimation(TranslateTransform.YProperty, null);
+        LeftTearOffset.Y = 0;
+        LeftPupil.BeginAnimation(OpacityProperty, null);
+        RightPupil.BeginAnimation(OpacityProperty, null);
+        LeftPupil.Opacity = RightPupil.Opacity = 1;
+        foreach (UIElement element in new UIElement[] { LeftHappyArc, RightHappyArc, LeftSadBrow, RightSadBrow, LeftTear, HappySparkle, LeftHeartPupilVisual, RightHeartPupilVisual, LeftSleepyLid, RightSleepyLid, LeftCuriousBrow, RightCuriousBrow })
+        {
+            element.BeginAnimation(OpacityProperty, null);
+            element.Opacity = 0;
+        }
+        LeftRoundPupilVisual.Opacity = RightRoundPupilVisual.Opacity = 1;
+        LeftStarPupilVisual.Opacity = RightStarPupilVisual.Opacity = 1;
+    }
+
+    private async void ClearEyePoseAfter(int version, int milliseconds)
+    {
+        await Task.Delay(milliseconds);
+        if (!_closed && version == _eyeReactionVersion) ResetEyeMotion();
     }
 
     private void PlayHappy()
     {
+        ResetEyeMotion();
+        int version = _eyeReactionVersion;
         _eyeReadyAt = DateTimeOffset.UtcNow.AddMilliseconds(1700);
         _eyeBusyUntil = DateTimeOffset.UtcNow.AddMilliseconds(1000);
         _pendingEmotion = EyeEmotion.None;
+        if (!AnimationsEnabled)
+        {
+            LeftPupil.Opacity = RightPupil.Opacity = 0;
+            LeftHappyArc.Opacity = RightHappyArc.Opacity = HappySparkle.Opacity = 1;
+            ClearEyePoseAfter(version, 980);
+            return;
+        }
 
         var hidePupils = PhaseFade(1, 0, 780, 980);
         LeftPupil.BeginAnimation(OpacityProperty, (DoubleAnimationUsingKeyFrames)hidePupils.Clone());
@@ -168,21 +398,28 @@ public partial class MainWindow
         RightHappyArc.BeginAnimation(OpacityProperty, (DoubleAnimationUsingKeyFrames)showArcs.Clone());
         HappySparkle.BeginAnimation(OpacityProperty, (DoubleAnimationUsingKeyFrames)showArcs.Clone());
 
-        if (!_settings.ReducedMotion) HopEyes();
+        HopEyes();
     }
 
     private void PlaySad()
     {
+        ResetEyeMotion();
+        int version = _eyeReactionVersion;
         _eyeReadyAt = DateTimeOffset.UtcNow.AddMilliseconds(1900);
         _eyeBusyUntil = DateTimeOffset.UtcNow.AddMilliseconds(1650);
         _pendingEmotion = EyeEmotion.None;
+        if (!AnimationsEnabled)
+        {
+            LeftSadBrow.Opacity = RightSadBrow.Opacity = LeftTear.Opacity = 1;
+            ClearEyePoseAfter(version, 1600);
+            return;
+        }
 
         var brows = PhaseFade(0, 1, 1200, 1600);
         LeftSadBrow.BeginAnimation(OpacityProperty, (DoubleAnimationUsingKeyFrames)brows.Clone());
         RightSadBrow.BeginAnimation(OpacityProperty, (DoubleAnimationUsingKeyFrames)brows.Clone());
         LeftTear.BeginAnimation(OpacityProperty, (DoubleAnimationUsingKeyFrames)brows.Clone());
 
-        if (_settings.ReducedMotion) return;
         DroopPupil(LeftPupilOffset, 1.2);
         DroopPupil(RightPupilOffset, -1.2);
         DroopEye(LeftEyeScale);

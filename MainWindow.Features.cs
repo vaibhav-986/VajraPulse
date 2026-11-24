@@ -483,9 +483,9 @@ public partial class MainWindow
     private async void Seek_MouseUp(object sender, MouseButtonEventArgs e) => await CommitSeek();
     private async void Seek_KeyUp(object sender, KeyEventArgs e) => await CommitSeek();
 
-    private void FilesTab_Click(object sender, RoutedEventArgs e) { UpdateShelf(); SetActivity(Activity.Shelf); }
-    private void CalendarTab_Click(object sender, RoutedEventArgs e) { UpdateCalendar(false); SetActivity(Activity.Calendar); }
-    private void InboxTab_Click(object sender, RoutedEventArgs e) { UpdateInbox(); SetActivity(Activity.Inbox); }
+    private void FilesTab_Click(object sender, RoutedEventArgs e) { if (!_updatingActivityTabs) { UpdateShelf(); SetActivity(Activity.Shelf); } }
+    private void CalendarTab_Click(object sender, RoutedEventArgs e) { if (!_updatingActivityTabs) { UpdateCalendar(false); SetActivity(Activity.Calendar); } }
+    private void InboxTab_Click(object sender, RoutedEventArgs e) { if (!_updatingActivityTabs) { UpdateInbox(); SetActivity(Activity.Inbox); } }
     private void UpdateShelf()
     {
         ShelfEmptyText.Visibility = _shelf.Files.Count == 0 ? Visibility.Visible : Visibility.Collapsed;

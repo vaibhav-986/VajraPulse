@@ -110,8 +110,10 @@ public sealed class MediaService : IDisposable
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
             image.DecodePixelWidth = 128;
+            image.DecodePixelHeight = 128;
             image.StreamSource = memory;
             image.EndInit();
+            if (image.PixelWidth <= 0 || image.PixelHeight <= 0 || (long)image.PixelWidth * image.PixelHeight > 16_384) return null;
             image.Freeze();
             return image;
         }

@@ -102,7 +102,8 @@ public sealed class AppSlotHotkeyService : IDisposable
     {
         if (_source != null) return;
         _source = HwndSource.FromHwnd(new WindowInteropHelper(_window).Handle);
-        _source?.AddHook(Hook);
+        if (_source == null) return;
+        _source.AddHook(Hook);
         for (int i = 0; i < _launchers.Length; i++)
             RegisterHotKey(_source.Handle, BaseId + i, 0x4003, (uint)(0x31 + i));
     }
