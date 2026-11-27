@@ -15,7 +15,7 @@ var tests = new (string Name, Action Run)[]
     ("Launcher routes explicit target kinds", TestLauncherKinds),
     ("Installed app catalog merges and filters", TestCatalogMergeAndFilter),
     ("Audio sessions group by application", TestAudioGrouping),
-    ("Version metadata is 1.4", TestVersionMetadata),
+    ("Version metadata is 1.8", TestVersionMetadata),
     ("Live telemetry is bounded", TestLiveTelemetry),
     ("Live Wi-Fi status is bounded", TestLiveWifi),
     ("Live audio enumeration is read-only", TestLiveAudio)
@@ -205,12 +205,12 @@ static void TestVersionMetadata()
     string? version = project.Descendants("Version").SingleOrDefault()?.Value;
     string? fileVersion = project.Descendants("FileVersion").SingleOrDefault()?.Value;
     Console.WriteLine($"DEBUG: Version={version}, FileVersion={fileVersion}");
-    Assert(version == "1.6.0" && fileVersion == "1.6.0.0", "Project versions should be 1.6.0.");
+    Assert(version == "1.8.0" && fileVersion == "1.8.0.0", "Project versions should be 1.8.0.");
     XDocument package = XDocument.Load(Path.Combine(root, "packaging", "Package.appxmanifest"));
     XNamespace ns = "http://schemas.microsoft.com/appx/manifest/foundation/windows10";
     string? msixVersion = package.Root?.Element(ns + "Identity")?.Attribute("Version")?.Value;
     Console.WriteLine($"DEBUG: MSIXVersion={msixVersion}");
-    Assert(msixVersion == "1.6.0.0", "MSIX version should be 1.6.0.0.");
+    Assert(msixVersion == "1.8.0.0", "MSIX version should be 1.8.0.0.");
 }
 
 static void TestLiveTelemetry()

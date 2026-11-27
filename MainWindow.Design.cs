@@ -23,7 +23,50 @@ public partial class MainWindow
         DockCenterButton.IsChecked = _settings.DockPosition == IslandDockPosition.TopCenter;
         DockRightButton.IsChecked = _settings.DockPosition == IslandDockPosition.TopRight;
         ArtworkAccentCheck.IsChecked = _settings.UseArtworkAccent;
+        UpdateAccentPreview();
         ApplyAccessoryLayout(_targetWidth);
+    }
+
+    private void UpdateAccentPreview() =>
+        AccentHexText.Text = string.IsNullOrWhiteSpace(_settings.AccentColor) ? "Theme default" : _settings.AccentColor.ToUpperInvariant();
+
+    private void AccentColor_Click(object sender, RoutedEventArgs e)
+    {
+        if (_updating || sender is not FrameworkElement { Tag: string hex }) return;
+        if (!App.TryParseColor(hex, out _)) return;
+        _settings.AccentColor = hex;
+        ((App)Application.Current).ApplyAccentColor(hex);
+        SavePreferences();
+        UpdateAccentPreview();
+        SettingsStatus.Text = $"Accent color set to {hex.ToUpperInvariant()}.";
+    }
+
+    private void AccentCustom_Click(object sender, RoutedEventArgs e)
+    {
+        using var dialog = new System.Windows.Forms.ColorDialog { FullOpen = true, AnyColor = true };
+        if (App.TryParseColor(_settings.AccentColor, out var current))
+            dialog.Color = System.Drawing.Color.FromArgb(current.R, current.G, current.B);
+        _featuresModal = true;
+        try
+        {
+            if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+        }
+        finally { _featuresModal = false; }
+        string hex = $"#{dialog.Color.R:X2}{dialog.Color.G:X2}{dialog.Color.B:X2}";
+        _settings.AccentColor = hex;
+        ((App)Application.Current).ApplyAccentColor(hex);
+        SavePreferences();
+        UpdateAccentPreview();
+        SettingsStatus.Text = $"Accent color set to {hex}.";
+    }
+
+    private void AccentReset_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.AccentColor = "";
+        ((App)Application.Current).ApplyAccentColor("");
+        SavePreferences();
+        UpdateAccentPreview();
+        SettingsStatus.Text = "Accent color reset to theme default.";
     }
 
     private void VisualMode_Click(object sender, RoutedEventArgs e)
@@ -32,6 +75,7 @@ public partial class MainWindow
             || mode is not ("Cute" or "Glass" or "Neon")) return;
         _settings.VisualMode = mode;
         ((App)Application.Current).ApplyVisualMode(mode);
+        ((App)Application.Current).ApplyAccentColor(_settings.AccentColor);
         _accentArtwork = null;
         UpdateArtworkAccent(_media.Snapshot.Artwork);
         LoadDesignPreferences();

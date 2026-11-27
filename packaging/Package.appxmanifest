@@ -4,7 +4,7 @@
  xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
  IgnorableNamespaces="uap uap3 rescap">
- <Identity Name="VajraPulse.Desktop" Publisher="CN=Vajra Pulse Local Development" Version="1.6.0.0" ProcessorArchitecture="x64" />
+ <Identity Name="VajraPulse.Desktop" Publisher="CN=Vajra Pulse Local Development" Version="1.8.0.0" ProcessorArchitecture="x64" />
  <Properties><DisplayName>Vajra Pulse</DisplayName><PublisherDisplayName>Local development</PublisherDisplayName><Logo>Assets\Logo50.png</Logo></Properties>
  <Resources><Resource Language="en-us" /></Resources>
  <Dependencies><TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" /></Dependencies>

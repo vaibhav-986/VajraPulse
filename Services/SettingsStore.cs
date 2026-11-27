@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -46,6 +47,12 @@ public sealed class PulseSettings
     public bool FocusTimerRunning { get; set; }
     public bool FocusTimerPaused { get; set; }
     public DateTimeOffset? FocusDeadlineUtc { get; set; }
+    public bool PomodoroEnabled { get; set; }
+    public int PomodoroWorkMinutes { get; set; } = 25;
+    public int PomodoroBreakMinutes { get; set; } = 5;
+    public int PomodoroLongBreakMinutes { get; set; } = 15;
+    public int PomodoroCyclesCompleted { get; set; }
+    public bool PomodoroIsBreak { get; set; }
     public bool HasSeenWelcome { get; set; }
     public string[] ShelfPaths { get; set; } = Array.Empty<string>();
     public string CalendarPath { get; set; } = "";
@@ -54,17 +61,21 @@ public sealed class PulseSettings
     public bool HideNotificationContent { get; set; } = true;
     public bool NotifyAllApps { get; set; }
     public string[] NotificationAppIds { get; set; } = Array.Empty<string>();
-    public string AccentColor { get; set; } = "#F5F5F7";
+    public string AccentColor { get; set; } = "";
     public string EyeStyle { get; set; } = "Googly";
     public string VisualMode { get; set; } = "Cute";
     public IslandDockPosition DockPosition { get; set; } = IslandDockPosition.TopCenter;
     public bool UseArtworkAccent { get; set; } = true;
+    public bool WeatherEnabled { get; set; }
+    public string WeatherCity { get; set; } = "";
+    public bool WeatherFahrenheit { get; set; }
     public AppLaunchSlotSettings[] LaunchSlots { get; set; } = SettingsStore.CreateEmptyLaunchSlots();
+    public Dictionary<string, string> CustomHotkeys { get; set; } = new Dictionary<string, string>();
 }
 
 public static class SettingsStore
 {
-    public const int CurrentSchemaVersion = 3;
+    public const int CurrentSchemaVersion = 5;
     public const int LaunchSlotCount = 5;
     public static string SettingsPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "VajraPulse", "settings.json");
 
@@ -80,6 +91,10 @@ public static class SettingsStore
             if (settings.SchemaVersion > CurrentSchemaVersion)
             {
                 return new PulseSettings { IsFutureSchema = true };
+            }
+            if (settings.SchemaVersion < 5 && string.Equals(settings.AccentColor, "#F5F5F7", StringComparison.OrdinalIgnoreCase))
+            {
+                settings.AccentColor = "";
             }
             settings.SchemaVersion = CurrentSchemaVersion;
             Normalize(settings);
@@ -118,6 +133,10 @@ public static class SettingsStore
     {
         s.TopOffset = Math.Clamp(s.TopOffset, 0, 80);
         s.FocusMinutes = Math.Clamp(s.FocusMinutes, 1, 180);
+        s.PomodoroWorkMinutes = Math.Clamp(s.PomodoroWorkMinutes, 1, 180);
+        s.PomodoroBreakMinutes = Math.Clamp(s.PomodoroBreakMinutes, 1, 60);
+        s.PomodoroLongBreakMinutes = Math.Clamp(s.PomodoroLongBreakMinutes, 5, 60);
+        s.PomodoroCyclesCompleted = Math.Clamp(s.PomodoroCyclesCompleted, 0, 1000);
         if (s.FocusSessionSeconds is < 1 or > 86_400)
         {
             s.FocusSessionSeconds = 0;
@@ -143,8 +162,17 @@ public static class SettingsStore
             if (!s.FocusTimerRunning) s.FocusDeadlineUtc = null;
         }
         s.MeetingReminderMinutes = Math.Clamp(s.MeetingReminderMinutes, 1, 60);
+        s.WeatherCity = (s.WeatherCity ?? "").Trim();
+        if (s.WeatherCity.Length > 80) s.WeatherCity = s.WeatherCity[..80];
         s.EyeStyle = s.EyeStyle is "Googly" or "Kawaii" or "Starry" ? s.EyeStyle : "Googly";
         s.VisualMode = s.VisualMode is "Cute" or "Glass" or "Neon" ? s.VisualMode : "Cute";
+        if (!string.IsNullOrWhiteSpace(s.AccentColor))
+        {
+            string value = s.AccentColor.Trim().TrimStart('#');
+            bool valid = (value.Length is 6 or 8) && value.All(Uri.IsHexDigit);
+            s.AccentColor = valid ? "#" + value.ToUpperInvariant() : "";
+        }
+        else s.AccentColor = "";
         if (!Enum.IsDefined(s.DockPosition)) s.DockPosition = IslandDockPosition.TopCenter;
         s.CalendarPath = s.CalendarPath is { Length: <= 4096 } ? s.CalendarPath : "";
         s.ShelfPaths = (s.ShelfPaths ?? Array.Empty<string>()).Where(p => !string.IsNullOrWhiteSpace(p) && p.Length <= 4096).Distinct(StringComparer.OrdinalIgnoreCase).Take(30).ToArray();

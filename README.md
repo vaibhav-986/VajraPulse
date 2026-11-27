@@ -1,8 +1,16 @@
 ﻿# Vajra Pulse
 
-**Version 1.7.0**
+**Version 1.8.0**
 
 A native Windows desktop island with a true-black compact pill, single-activity expansion, live Windows integrations, five app-launch slots, local system activity, per-app audio mixing, and cute googly eyes. No browser account, camera access, cloud service, or telemetry is required.
+
+## 1.8.0 Updates
+- Added Pomodoro focus presets with configurable work, break, and long-break lengths; completed sessions cycle automatically and long breaks arrive every four cycles.
+- Added custom keyboard shortcuts: rebind eight actions in Settings, or type `Disabled` to turn one off. Ctrl + Alt + Space still toggles the island.
+- Added a memory-only clipboard history in Tools → Clip. Sensitive text (passwords, API keys, private keys, JWT tokens, and card-like numbers) is never stored; entries are deduplicated, pinned entries survive eviction, and stored text is bounded to 10,000 characters.
+- Added custom accent colors with seven presets, a full color picker, and a theme-default reset. The accent updates buttons, highlights, and on-accent text contrast immediately.
+- Added an optional weather readout in the expanded footer using wttr.in, with city, Celsius/Fahrenheit choice, ten-minute caching, and automatic refresh.
+- Settings schema advanced to version 5 with migration for the previous fixed accent color.
 
 ## 1.7.0 Updates
 - Removed system volume controls from Settings panel for a cleaner, more focused interface.
@@ -31,13 +39,14 @@ Double-click `Start-VajraPulse.cmd`. The ordinary app uses the installed .NET 8 
 - Hover to expand; move away to collapse a hover-opened island.
 - After a short idle delay, the compact island retreats completely. Move the pointer to its selected top-left, top-center, or top-right screen-edge zone to reveal it again.
 - Click to keep it open while interacting; click away or press Escape to tuck it away.
-- Ctrl + Alt + Space expands/collapses or reveals the island.
+- Ctrl + Alt + Space expands/collapses or reveals the island. Eight additional shortcuts (timer, music, focus, files, calendar, tools, Pomodoro, and reset) are rebindable in Settings.
+- Pick a preset accent color or any custom color in Settings; the theme default can be restored with one click.
 - Choose Cute Companion, simulated Glass, or Neon Pulse design mode in Settings. Three locally saved eye stylesâ€”Googly, Kawaii, and Starryâ€”remain available in every mode.
 - Music artwork can color only the music timeline, playback bars, and compact media-progress bar; extracted colors remain in memory and are never uploaded or persisted.
 - The googly eyes follow your pointer, blink, and react when apps open or close.
 - Use the Music, Focus, Files, Calendar, Alerts, and Tools tabs for one activity at a time.
 - The optional side buttons open System tools, Bluetooth Settings, and Wi-Fi Settings; each can be shown or hidden independently in Settings.
-- Tools remains available from the expanded island and contains local CPU/memory/network activity, five app shortcuts, and the active-app volume mixer.
+- Tools remains available from the expanded island and contains local CPU/memory/network activity, five app shortcuts, the active-app volume mixer, and a memory-only clipboard history.
 - Right-click the pill for Settings; the tray menu provides show/hide, settings, and quit.
 - If a timer and media session are both present, the secondary artwork bubble opens music without stopping the timer.
 
@@ -60,6 +69,18 @@ Internal-display brightness control is available in Settings when the monitor ex
 ### Headphones
 
 A brief badge appears when headphones/headsets become the active default multimedia audio endpoint. Other output-device changes are also identified. This is default-device sensing, not universal Bluetooth battery reporting or detection of every non-active accessory.
+
+### Pomodoro, custom shortcuts, clipboard, accent color, and weather
+
+**Pomodoro** adds work/break cycles to the focus timer. Work, short-break, and long-break minutes are configurable in Settings; a completed work session starts a break automatically, and every fourth completed work cycle earns a long break. Cycle progress is saved locally with the timer.
+
+**Custom shortcuts** replace the default Ctrl + Alt combinations for timer, music, focus, files, calendar, tools, Pomodoro, and reset. Enter a new combination in Settings or type `Disabled` to turn that shortcut off. Ctrl + Alt + Space remains the built-in expand/collapse shortcut.
+
+**Tools → Clip** keeps a memory-only clipboard history (up to 20 entries). Text is bounded to 10,000 characters and deduplicated; pinned entries survive capacity eviction. Passwords, API keys, private keys, JWT-shaped tokens, and Luhn-valid card-like numbers are detected and never stored. Copying an entry back sets it as the newest clipboard text. History is cleared on exit and is never written to disk.
+
+**Accent color** overrides the active theme's highlight color. Seven presets and a custom color picker are available; text drawn on the accent automatically switches between dark and light for contrast. **Reset** returns to the theme default.
+
+**Weather** is optional and off by default. When enabled with a city, the expanded footer shows the current temperature and conditions from wttr.in, cached for ten minutes and refreshed periodically. Celsius is the default; Fahrenheit can be selected in Settings.
 
 ### System activity and connectivity buttons
 
@@ -143,7 +164,7 @@ The advanced desktop test uses clearly labeled temporary fixtures, imports and c
 
 ## Storage and limits
 
-Preferences, visual mode, eye style, dock position, artwork-accent preference, side-button visibility, active focus state, shelf path references, the selected calendar file path, and five selected app references are stored in `%LOCALAPPDATA%\VajraPulse\settings.json`. Extracted artwork colors, CPU, memory, network, Wi-Fi, Bluetooth, launch history, audio-session state, and notification bodies are not persisted. A runtime crash report, if needed, is written to `last-error.txt`. Display selection does not survive restart. The decorative lens never opens the camera. This app does not mirror phone calls or phone activity.
+Preferences, visual mode, eye style, dock position, artwork-accent preference, custom accent color, custom shortcuts, Pomodoro durations and cycle state, weather city/unit preference, side-button visibility, active focus state, shelf path references, the selected calendar file path, and five selected app references are stored in `%LOCALAPPDATA%\VajraPulse\settings.json`. Clipboard history, extracted artwork colors, CPU, memory, network, Wi-Fi, Bluetooth, launch history, audio-session state, and notification bodies are not persisted. A runtime crash report, if needed, is written to `last-error.txt`. Display selection does not survive restart. The decorative lens never opens the camera. This app does not mirror phone calls or phone activity.
 
 ## Source
 
@@ -153,7 +174,7 @@ Preferences, visual mode, eye style, dock position, artwork-accent preference, s
 - `MainWindow.Tools.cs`: system telemetry, connectivity rail, app slots, and active-app mixer UI.
 - `MainWindow.Eyes.cs`: googly-eye pointer tracking, blinking, and app open/close reactions.
 - `Core/`: independent timer and island state logic.
-- `Services/SystemTelemetryService.cs`, `WifiStatusService.cs`, `InstalledAppCatalogService.cs`, `AppLauncherService.cs`, and `AudioSessionService.cs`: bounded Windows 1.3 integrations.
+- `Services/SystemTelemetryService.cs`, `WifiStatusService.cs`, `InstalledAppCatalogService.cs`, `AppLauncherService.cs`, `AudioSessionService.cs`, `ClipboardHistoryService.cs`, `WeatherService.cs`, and `DesktopServices.cs`: bounded Windows integrations, clipboard privacy policy, weather lookup, and custom shortcut registration.
 - `UI/PulseTheme.xaml`: native visual theme.
 - `tests/`: standalone regression and desktop smoke tests.
 - `packaging/`: optional notification-capable packaging and opt-in installation.

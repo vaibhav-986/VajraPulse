@@ -24,6 +24,7 @@ public partial class MainWindow
     private readonly AppLauncherService _appLauncher = new();
     private readonly InstalledAppCatalogService _installedApps = new();
     private readonly AudioSessionService _audioSessions = new();
+    private readonly ClipboardHistoryService _clipboard = new();
     private readonly ObservableCollection<LaunchSlotItem> _launchSlotItems = new();
     private readonly ObservableCollection<InstalledAppItem> _catalogItems = new();
     private readonly ObservableCollection<MixerItem> _mixerItems = new();
@@ -33,7 +34,7 @@ public partial class MainWindow
     private int _catalogSlotIndex = -1;
     private ToolSection _toolSection = ToolSection.System;
 
-    private enum ToolSection { System, Apps, Mixer }
+    private enum ToolSection { System, Apps, Mixer, Clip }
 
     private async Task InitializeToolsAsync()
     {
@@ -41,7 +42,9 @@ public partial class MainWindow
         SettingsLaunchSlotsList.ItemsSource = _launchSlotItems;
         AppCatalogResults.ItemsSource = _catalogItems;
         MixerList.ItemsSource = _mixerItems;
+        ClipboardList.ItemsSource = _clipboard.Entries;
         RefreshLaunchSlotItems();
+        RefreshClipboardItems();
         RenderToolSection();
         await RefreshTelemetryAsync();
         if (_closed) return;
@@ -54,6 +57,7 @@ public partial class MainWindow
         _toolsBusy = true;
         try
         {
+            if (_clipboard.Poll()) RefreshClipboardItems();
             await RefreshTelemetryAsync();
             if (_closed) return;
             if (_ticks % 5 == 0) await RefreshWifiAsync();
@@ -72,6 +76,7 @@ public partial class MainWindow
         _catalogItems.Clear();
         _launchSlotItems.Clear();
         _mixerItems.Clear();
+        _clipboard.Dispose();
     }
 
     private async Task RefreshTelemetryAsync()
@@ -164,6 +169,11 @@ public partial class MainWindow
         SetToolSection(ToolSection.Mixer);
         await RefreshMixerAsync();
     }
+    private void ClipTool_Click(object sender, RoutedEventArgs e)
+    {
+        SetToolSection(ToolSection.Clip);
+        if (_clipboard.Poll()) RefreshClipboardItems();
+    }
 
     private void SetToolSection(ToolSection section)
     {
@@ -177,10 +187,38 @@ public partial class MainWindow
         SystemToolsPanel.Visibility = _toolSection == ToolSection.System ? Visibility.Visible : Visibility.Collapsed;
         AppsToolsPanel.Visibility = _toolSection == ToolSection.Apps ? Visibility.Visible : Visibility.Collapsed;
         MixerToolsPanel.Visibility = _toolSection == ToolSection.Mixer ? Visibility.Visible : Visibility.Collapsed;
+        ClipToolsPanel.Visibility = _toolSection == ToolSection.Clip ? Visibility.Visible : Visibility.Collapsed;
         SystemToolSelector.Foreground = (Brush)FindResource(_toolSection == ToolSection.System ? "TextBrush" : "MutedBrush");
         AppsToolSelector.Foreground = (Brush)FindResource(_toolSection == ToolSection.Apps ? "TextBrush" : "MutedBrush");
         MixerToolSelector.Foreground = (Brush)FindResource(_toolSection == ToolSection.Mixer ? "TextBrush" : "MutedBrush");
+        ClipToolSelector.Foreground = (Brush)FindResource(_toolSection == ToolSection.Clip ? "TextBrush" : "MutedBrush");
         if (_toolSection == ToolSection.Apps) RefreshLaunchSlotItems();
+    }
+
+    private void RefreshClipboardItems()
+    {
+        int count = _clipboard.Entries.Count;
+        ClipboardList.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        ClipEmptyText.Visibility = count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        ClipStatusText.Text = count == 0 ? "Memory only · up to 20 items" : $"{count} items · memory only";
+    }
+
+    private void ClipboardItem_Copy_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: ClipboardHistoryEntry entry }) return;
+        if (entry.Text != null && _clipboard.CopyToClipboard(entry.Text))
+        {
+            ClipStatusText.Text = "Copied back to clipboard.";
+            Notify("Copied", "Clipboard entry restored", 2);
+        }
+        else ClipStatusText.Text = "Clipboard is busy. Try again.";
+    }
+
+    private void Clipboard_Clear_Click(object sender, RoutedEventArgs e)
+    {
+        _clipboard.ClearAll();
+        RefreshClipboardItems();
+        ClipStatusText.Text = "Clipboard history cleared.";
     }
 
     private void OpenWindowsSettings(string uri)

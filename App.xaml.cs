@@ -1,7 +1,9 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.Threading;
 using System.Windows;
+using System.Windows.Media;
 
 namespace VajraPulse;
 
@@ -31,6 +33,42 @@ public partial class App : Application
         if (existingIndex >= 0) dictionaries[existingIndex] = replacement;
         else dictionaries.Insert(0, replacement);
         CurrentVisualMode = mode;
+    }
+
+    public void ApplyAccentColor(string? hex)
+    {
+        if (!TryParseColor(hex, out Color color))
+        {
+            Resources.Remove("AccentBrush");
+            Resources.Remove("OnAccentBrush");
+            return;
+        }
+        double luminance = (0.2126 * color.R + 0.7152 * color.G + 0.0722 * color.B) / 255d;
+        Color onAccent = luminance > 0.55 ? Color.FromRgb(20, 20, 26) : Colors.White;
+        var accent = new SolidColorBrush(color);
+        var on = new SolidColorBrush(onAccent);
+        accent.Freeze();
+        on.Freeze();
+        Resources["AccentBrush"] = accent;
+        Resources["OnAccentBrush"] = on;
+    }
+
+    public static bool TryParseColor(string? hex, out Color color)
+    {
+        color = default;
+        if (string.IsNullOrWhiteSpace(hex)) return false;
+        string value = hex.Trim().TrimStart('#');
+        if (value.Length == 6 && uint.TryParse(value, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint rgb))
+        {
+            color = Color.FromRgb((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
+            return true;
+        }
+        if (value.Length == 8 && uint.TryParse(value, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint argb))
+        {
+            color = Color.FromArgb((byte)(argb >> 24), (byte)(argb >> 16), (byte)(argb >> 8), (byte)argb);
+            return true;
+        }
+        return false;
     }
 
     protected override void OnStartup(StartupEventArgs e)

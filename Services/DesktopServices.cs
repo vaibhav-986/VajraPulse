@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using Forms = System.Windows.Forms;
 
@@ -131,6 +133,128 @@ public sealed class AppSlotHotkeyService : IDisposable
             _source = null;
         }
     }
+    [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool RegisterHotKey(IntPtr hwnd, int id, uint modifiers, uint key);
+    [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool UnregisterHotKey(IntPtr hwnd, int id);
+}
+
+public enum HotkeyAction
+{
+    ToggleExpand,
+    StartStopTimer,
+    SwitchToMusic,
+    SwitchToFocus,
+    SwitchToFiles,
+    SwitchToCalendar,
+    SwitchToTools,
+    TogglePomodoro,
+    ResetTimer
+}
+
+public sealed class HotkeyBinding
+{
+    public HotkeyAction Action { get; set; }
+    public ModifierKeys Modifiers { get; set; }
+    public Key Key { get; set; }
+    public bool Enabled { get; set; } = true;
+}
+
+public sealed class CustomHotkeyService : IDisposable
+{
+    private const int BaseId = 0x5700;
+    private readonly Window _window;
+    private readonly Dictionary<HotkeyAction, Action> _actions;
+    private readonly Dictionary<int, HotkeyAction> _registeredHotkeys = new();
+    private HwndSource? _source;
+
+    public CustomHotkeyService(Window window, Dictionary<HotkeyAction, Action> actions)
+    {
+        _window = window;
+        _actions = actions;
+        window.SourceInitialized += SourceInitialized;
+        if (new WindowInteropHelper(window).Handle != IntPtr.Zero) RegisterAll();
+    }
+
+    private void SourceInitialized(object? sender, EventArgs e) => RegisterAll();
+
+    public void RegisterAll()
+    {
+        if (_source != null) return;
+        _source = HwndSource.FromHwnd(new WindowInteropHelper(_window).Handle);
+        if (_source == null) return;
+        _source.AddHook(Hook);
+    }
+
+    public bool RegisterHotkey(HotkeyBinding binding)
+    {
+        if (_source == null || !binding.Enabled) return false;
+        
+        int id = BaseId + (int)binding.Action;
+        uint modifiers = ConvertModifiers(binding.Modifiers);
+        uint vk = (uint)KeyInterop.VirtualKeyFromKey(binding.Key);
+        
+        if (_registeredHotkeys.ContainsKey(id))
+        {
+            UnregisterHotKey(_source.Handle, id);
+            _registeredHotkeys.Remove(id);
+        }
+        
+        bool success = RegisterHotKey(_source.Handle, id, modifiers, vk);
+        if (success) _registeredHotkeys[id] = binding.Action;
+        return success;
+    }
+
+    public void UnregisterHotkey(HotkeyAction action)
+    {
+        if (_source == null) return;
+        int id = BaseId + (int)action;
+        if (_registeredHotkeys.ContainsKey(id))
+        {
+            UnregisterHotKey(_source.Handle, id);
+            _registeredHotkeys.Remove(id);
+        }
+    }
+
+    private uint ConvertModifiers(ModifierKeys modifiers)
+    {
+        uint result = 0;
+        if ((modifiers & ModifierKeys.Alt) == ModifierKeys.Alt) result |= 0x0001;
+        if ((modifiers & ModifierKeys.Control) == ModifierKeys.Control) result |= 0x0002;
+        if ((modifiers & ModifierKeys.Shift) == ModifierKeys.Shift) result |= 0x0004;
+        if ((modifiers & ModifierKeys.Windows) == ModifierKeys.Windows) result |= 0x0008;
+        result |= 0x4000;
+        return result;
+    }
+
+    private IntPtr Hook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        if (msg == 0x0312)
+        {
+            int id = wParam.ToInt32();
+            if (_registeredHotkeys.TryGetValue(id, out HotkeyAction action))
+            {
+                if (_actions.TryGetValue(action, out Action? callback))
+                {
+                    callback();
+                    handled = true;
+                }
+            }
+        }
+        return IntPtr.Zero;
+    }
+
+    public void Dispose()
+    {
+        _window.SourceInitialized -= SourceInitialized;
+        if (_source != null)
+        {
+            foreach (var id in _registeredHotkeys.Keys)
+                UnregisterHotKey(_source.Handle, id);
+            _source.RemoveHook(Hook);
+            _source = null;
+        }
+        _registeredHotkeys.Clear();
+    }
+
     [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool RegisterHotKey(IntPtr hwnd, int id, uint modifiers, uint key);
     [DllImport("user32.dll")][return: MarshalAs(UnmanagedType.Bool)] private static extern bool UnregisterHotKey(IntPtr hwnd, int id);
 }

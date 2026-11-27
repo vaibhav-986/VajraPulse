@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -26,13 +27,14 @@ public partial class MainWindow
     private readonly PrivacyUsageService _privacyUsage = new();
     private readonly DownloadProgressService _downloads = new();
     private readonly BluetoothBatteryService _bluetoothBattery = new(TimeSpan.FromSeconds(4));
+    private readonly WeatherService _weather = new();
     private readonly Dictionary<string, BluetoothBatteryDevice> _bluetoothDevices = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _bluetoothLowNotified = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<PulseNotification> _recentAlerts = new();
     private readonly HashSet<string> _remindedMeetings = new(StringComparer.Ordinal);
     private readonly DispatcherTimer _seekDebounce = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private readonly DispatcherTimer _brightnessDebounce = new() { Interval = TimeSpan.FromMilliseconds(250) };
-    private bool _featuresInitialized, _featuresModal, _featureTickBusy, _brightnessBusy, _brightnessSending;
+    private bool _featuresInitialized, _featuresModal, _featureTickBusy, _brightnessBusy, _brightnessSending, _weatherBusy;
     private bool _seekPending, _seekSending, _brightnessPending, _dropHover, _shelfDragging, _privacyBusy, _bluetoothBusy, _bluetoothInitialized;
     private string? _trackedDownloadId, _displayedDownloadId, _renderedDesktopActivityId, _privacySettingsUri;
     private BrightnessSnapshot? _brightness;
@@ -82,12 +84,13 @@ public partial class MainWindow
             if (access.Allowed) await SyncNotifications();
         }
         LoadFeaturePreferences();
+        _ = RefreshWeatherAsync();
     }
 
     private void DisposeFeatures()
     {
         _seekDebounce.Stop(); _brightnessDebounce.Stop();
-        _notifications.Dispose(); _privacyUsage.Dispose(); _downloads.Dispose();
+        _notifications.Dispose(); _privacyUsage.Dispose(); _downloads.Dispose(); _weather.Dispose();
         DisposeTools();
         _recentAlerts.Clear();
     }
@@ -98,6 +101,12 @@ public partial class MainWindow
         HideNotificationCheck.IsChecked = _settings.HideNotificationContent;
         AllNotificationsCheck.IsChecked = _settings.NotifyAllApps;
         NotificationStatus.Text = _notifications.Status;
+        WeatherEnabledCheck.IsChecked = _settings.WeatherEnabled;
+        WeatherCityBox.Text = _settings.WeatherCity;
+        WeatherFahrenheitCheck.IsChecked = _settings.WeatherFahrenheit;
+        WeatherStatus.Text = _settings.WeatherEnabled && _settings.WeatherCity.Length > 0
+            ? "Weather refreshes every few minutes. Powered by wttr.in."
+            : "City is sent to wttr.in only to fetch local weather. No account needed.";
     }
     private async Task TickFeaturesAsync()
     {
@@ -119,8 +128,50 @@ public partial class MainWindow
             if (_ticks % 5 == 0 && _settings.NotificationsEnabled) await SyncNotifications();
             if (_closed) return;
             if (_ticks % 15 == 0) UpdateCalendar(true);
+            if (_ticks % 300 == 0 && _settings.WeatherEnabled) _ = RefreshWeatherAsync();
         }
         finally { _featureTickBusy = false; }
+    }
+
+    private async Task RefreshWeatherAsync()
+    {
+        if (_closed || _weatherBusy) return;
+        if (!_settings.WeatherEnabled || string.IsNullOrWhiteSpace(_settings.WeatherCity))
+        {
+            WeatherText.Text = _settings.WeatherEnabled ? "Add a city in Settings" : "";
+            WeatherText.ToolTip = _settings.WeatherEnabled ? "Set a city in Settings to show local weather." : null;
+            return;
+        }
+        _weatherBusy = true;
+        try
+        {
+            WeatherSnapshot snapshot = await _weather.FetchAsync(_settings.WeatherCity, _settings.WeatherFahrenheit, CancellationToken.None);
+            if (_closed) return;
+            WeatherText.Text = snapshot.DisplayText;
+            WeatherText.ToolTip = snapshot.FullDescription;
+            WeatherStatus.Text = snapshot.IsAvailable
+                ? $"Last updated {snapshot.FetchedAt:HH:mm}. Powered by wttr.in."
+                : snapshot.Detail;
+        }
+        finally { _weatherBusy = false; }
+    }
+
+    private void Weather_Settings_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_ready || _updating) return;
+        _settings.WeatherEnabled = WeatherEnabledCheck.IsChecked == true;
+        _settings.WeatherFahrenheit = WeatherFahrenheitCheck.IsChecked == true;
+        SavePreferences();
+        _ = RefreshWeatherAsync();
+    }
+
+    private void WeatherCity_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (!_ready || _updating) return;
+        _settings.WeatherCity = WeatherCityBox.Text.Trim();
+        WeatherCityBox.Text = _settings.WeatherCity;
+        SavePreferences();
+        _ = RefreshWeatherAsync();
     }
 
     private async Task RefreshPrivacyActivityAsync()

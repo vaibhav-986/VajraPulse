@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -29,6 +30,7 @@ public partial class MainWindow : Window
     private TrayService? _tray;
     private HotkeyService? _hotkey;
     private AppSlotHotkeyService? _appSlotHotkeys;
+    private CustomHotkeyService? _customHotkeys;
     private IntPtr _handle;
     private Rect _monitor;
     private bool _ready, _updating, _pinned, _userHidden, _closed;
@@ -52,6 +54,7 @@ public partial class MainWindow : Window
     {
         _settings = SettingsStore.Load();
         ((App)Application.Current).ApplyVisualMode(_settings.VisualMode);
+        ((App)Application.Current).ApplyAccentColor(_settings.AccentColor);
         InitializeComponent();
         ApplyRailVisibility();
         Island.SizeChanged += (_, _) =>
@@ -64,6 +67,18 @@ public partial class MainWindow : Window
         {
             i => LaunchSlotDirect(0), i => LaunchSlotDirect(1), i => LaunchSlotDirect(2),
             i => LaunchSlotDirect(3), i => LaunchSlotDirect(4)
+        });
+        _customHotkeys = new CustomHotkeyService(this, new Dictionary<HotkeyAction, Action>
+        {
+            { HotkeyAction.ToggleExpand, () => Dispatcher.Invoke(ToggleFromShortcut) },
+            { HotkeyAction.StartStopTimer, () => Dispatcher.Invoke(() => Timer_Click(this, new RoutedEventArgs())) },
+            { HotkeyAction.SwitchToMusic, () => Dispatcher.Invoke(() => { SetActivity(Activity.Music); Expand(true); }) },
+            { HotkeyAction.SwitchToFocus, () => Dispatcher.Invoke(() => { SetActivity(Activity.Focus); Expand(true); }) },
+            { HotkeyAction.SwitchToFiles, () => Dispatcher.Invoke(() => { SetActivity(Activity.Shelf); Expand(true); }) },
+            { HotkeyAction.SwitchToCalendar, () => Dispatcher.Invoke(() => { SetActivity(Activity.Calendar); Expand(true); }) },
+            { HotkeyAction.SwitchToTools, () => Dispatcher.Invoke(() => { SetActivity(Activity.Tools); Expand(true); }) },
+            { HotkeyAction.TogglePomodoro, () => Dispatcher.Invoke(() => Pomodoro_Click(this, new RoutedEventArgs())) },
+            { HotkeyAction.ResetTimer, () => Dispatcher.Invoke(() => Reset_Click(this, new RoutedEventArgs())) }
         });
         SourceInitialized += (_, _) =>
         {
@@ -82,6 +97,7 @@ public partial class MainWindow : Window
             _tray = new TrayService(() => Dispatcher.Invoke(ToggleVisibility),
                 () => Dispatcher.Invoke(OpenSettings), () => Dispatcher.Invoke(Quit));
             ShortcutText.Text = _hotkey.IsRegistered ? "Ctrl + Alt + Space" : "Shortcut unavailable · use tray";
+            RegisterCustomHotkeys();
             _tick.Tick += Tick;
             _hover.Tick += (_, _) =>
             {
@@ -108,10 +124,45 @@ public partial class MainWindow : Window
         // _waveMeter.Tick += (_, _) => UpdateWaveLevels();
         _focus.Completed += (_, _) =>
         {
-                SavePreferences();
+            SavePreferences();
+            if (_settings.PomodoroEnabled)
+            {
+                if (!_settings.PomodoroIsBreak)
+                {
+                    // Work session completed
+                    _settings.PomodoroCyclesCompleted++;
+                    _settings.PomodoroIsBreak = true;
+                    
+                    bool isLongBreak = _settings.PomodoroCyclesCompleted % 4 == 0;
+                    int breakMinutes = isLongBreak ? _settings.PomodoroLongBreakMinutes : _settings.PomodoroBreakMinutes;
+                    
+                    Notify("Work complete!", isLongBreak ? $"Long break: {breakMinutes} min" : $"Short break: {breakMinutes} min", 8);
+                    ReactHearts();
+                    
+                    // Auto-start break
+                    _focus.Start(TimeSpan.FromMinutes(breakMinutes));
+                    SavePreferences();
+                    UpdateTimer(); UpdateCompact();
+                }
+                else
+                {
+                    // Break completed
+                    _settings.PomodoroIsBreak = false;
+                    Notify("Break complete", $"Ready for work session {_settings.PomodoroCyclesCompleted + 1}", 8);
+                    ReactCurious();
+                    
+                    // Auto-start work session
+                    _focus.Start(TimeSpan.FromMinutes(_settings.PomodoroWorkMinutes));
+                    SavePreferences();
+                    UpdateTimer(); UpdateCompact();
+                }
+            }
+            else
+            {
                 Notify("Focus complete", "Take a little breather.", 12);
                 ReactHearts();
-            };
+            }
+        };
             RestoreFocusState();
             PollLocalState();
             await RefreshMedia();
@@ -136,7 +187,7 @@ public partial class MainWindow : Window
             ShutdownEyes();
             SavePreferences();
             DisposeFeatures();
-            _tray?.Dispose(); _hotkey?.Dispose(); _appSlotHotkeys?.Dispose(); _media.Dispose();
+            _tray?.Dispose(); _hotkey?.Dispose(); _appSlotHotkeys?.Dispose(); _customHotkeys?.Dispose(); _media.Dispose();
             HwndSource.FromHwnd(_handle)?.RemoveHook(WindowHook);
             Application.Current.Shutdown();
         };
@@ -252,7 +303,7 @@ public partial class MainWindow : Window
             Activity.Shelf => $"File shelf · {_shelf.Files.Count} shortcuts",
             Activity.Calendar => "Next meeting",
             Activity.Inbox => "Notification previews",
-            Activity.Tools => _toolSection switch { ToolSection.Apps => "App shortcuts", ToolSection.Mixer => "App volume mixer", _ => "System activity" },
+            Activity.Tools => _toolSection switch { ToolSection.Apps => "App shortcuts", ToolSection.Mixer => "App volume mixer", ToolSection.Clip => "Clipboard history", _ => "System activity" },
             _ => _media.Snapshot.HasSession ? _media.Snapshot.IsPlaying ? "Now playing" : "Paused" : "Music"
         });
     }
@@ -285,7 +336,26 @@ public partial class MainWindow : Window
         bool active = _focus.IsRunning || _focus.IsPaused;
         TimeSpan remaining = active || _focus.Remaining == TimeSpan.Zero ? _focus.Remaining : TimeSpan.FromMinutes(_settings.FocusMinutes);
         TimerText.Text = FormatTime(remaining);
-        FocusLabel.Text = _focus.IsPaused ? "Paused" : _focus.IsRunning ? "Time to focus" : "Focus timer";
+        
+        if (_settings.PomodoroEnabled)
+        {
+            if (_focus.IsPaused)
+                FocusLabel.Text = "Paused";
+            else if (_focus.IsRunning)
+                FocusLabel.Text = _settings.PomodoroIsBreak 
+                    ? $"Break time · Cycle {_settings.PomodoroCyclesCompleted}" 
+                    : $"Focus work · Cycle {_settings.PomodoroCyclesCompleted + 1}";
+            else
+                FocusLabel.Text = $"Pomodoro · {_settings.PomodoroCyclesCompleted} cycles";
+            
+            PomodoroButton.Background = _settings.PomodoroEnabled ? (System.Windows.Media.Brush)FindResource("TimerBrush") : (System.Windows.Media.Brush)FindResource("PanelBrush");
+        }
+        else
+        {
+            FocusLabel.Text = _focus.IsPaused ? "Paused" : _focus.IsRunning ? "Time to focus" : "Focus timer";
+            PomodoroButton.Background = (System.Windows.Media.Brush)FindResource("PanelBrush");
+        }
+        
         TimerButton.Content = _focus.IsRunning ? "Pause" : _focus.IsPaused ? "Resume" : "Start focus";
         ResetButton.IsEnabled = active || _focus.Remaining == TimeSpan.Zero;
     }
@@ -580,6 +650,18 @@ public partial class MainWindow : Window
         GapSlider.Value = _settings.TopOffset;
         GapText.Text = $"{_settings.TopOffset} px";
         FocusMinutesBox.Text = _settings.FocusMinutes.ToString();
+        PomodoroEnabledCheck.IsChecked = _settings.PomodoroEnabled;
+        PomodoroWorkBox.Text = _settings.PomodoroWorkMinutes.ToString();
+        PomodoroBreakBox.Text = _settings.PomodoroBreakMinutes.ToString();
+        PomodoroLongBreakBox.Text = _settings.PomodoroLongBreakMinutes.ToString();
+        HotkeyTimerBox.Text = GetHotkeyText(HotkeyAction.StartStopTimer);
+        HotkeyMusicBox.Text = GetHotkeyText(HotkeyAction.SwitchToMusic);
+        HotkeyFocusBox.Text = GetHotkeyText(HotkeyAction.SwitchToFocus);
+        HotkeyFilesBox.Text = GetHotkeyText(HotkeyAction.SwitchToFiles);
+        HotkeyCalendarBox.Text = GetHotkeyText(HotkeyAction.SwitchToCalendar);
+        HotkeyToolsBox.Text = GetHotkeyText(HotkeyAction.SwitchToTools);
+        HotkeyPomodoroBox.Text = GetHotkeyText(HotkeyAction.TogglePomodoro);
+        HotkeyResetBox.Text = GetHotkeyText(HotkeyAction.ResetTimer);
         LoadFeaturePreferences();
         _updating = false;
     }
@@ -756,6 +838,80 @@ public partial class MainWindow : Window
         if (_state.Mode == IslandMode.Compact) { Expand(true); Activate(); }
         else { _hoverRequiresReentry = true; Collapse(); }
     }
+
+    private static readonly Dictionary<HotkeyAction, string> DefaultHotkeys = new()
+    {
+        { HotkeyAction.StartStopTimer, "Ctrl+Alt+T" },
+        { HotkeyAction.SwitchToMusic, "Ctrl+Alt+M" },
+        { HotkeyAction.SwitchToFocus, "Ctrl+Alt+F" },
+        { HotkeyAction.SwitchToFiles, "Ctrl+Alt+S" },
+        { HotkeyAction.SwitchToCalendar, "Ctrl+Alt+C" },
+        { HotkeyAction.SwitchToTools, "Ctrl+Alt+X" },
+        { HotkeyAction.TogglePomodoro, "Ctrl+Alt+P" },
+        { HotkeyAction.ResetTimer, "Ctrl+Alt+R" }
+    };
+
+    private void RegisterCustomHotkeys()
+    {
+        if (_customHotkeys == null) return;
+        foreach (var (action, defaultGesture) in DefaultHotkeys)
+        {
+            string gesture = _settings.CustomHotkeys.TryGetValue(action.ToString(), out string? custom) && !string.IsNullOrWhiteSpace(custom)
+                ? custom : defaultGesture;
+            if (gesture.Equals("Disabled", StringComparison.OrdinalIgnoreCase))
+            {
+                _customHotkeys.UnregisterHotkey(action);
+                continue;
+            }
+            if (TryParseHotkey(gesture, out ModifierKeys modifiers, out Key key))
+                _customHotkeys.RegisterHotkey(new HotkeyBinding { Action = action, Modifiers = modifiers, Key = key, Enabled = true });
+        }
+    }
+
+    private static bool TryParseHotkey(string gesture, out ModifierKeys modifiers, out Key key)
+    {
+        modifiers = ModifierKeys.None;
+        key = Key.None;
+        if (string.IsNullOrWhiteSpace(gesture)) return false;
+        foreach (string part in gesture.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            switch (part.ToLowerInvariant())
+            {
+                case "ctrl" or "control": modifiers |= ModifierKeys.Control; break;
+                case "alt": modifiers |= ModifierKeys.Alt; break;
+                case "shift": modifiers |= ModifierKeys.Shift; break;
+                case "win" or "windows": modifiers |= ModifierKeys.Windows; break;
+                default:
+                    if (!Enum.TryParse(part, true, out key)) return false;
+                    break;
+            }
+        }
+        return key != Key.None && modifiers != ModifierKeys.None;
+    }
+
+    private string GetHotkeyText(HotkeyAction action) =>
+        _settings.CustomHotkeys.TryGetValue(action.ToString(), out string? custom) && !string.IsNullOrWhiteSpace(custom)
+            ? custom
+            : DefaultHotkeys.TryGetValue(action, out string? def) ? def : "Disabled";
+
+    private void HotkeyBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (!_ready || _updating) return;
+        if (sender is not TextBox box || box.Tag?.ToString() is not string actionName) return;
+        if (!Enum.TryParse(actionName, out HotkeyAction action)) return;
+        string value = box.Text.Trim();
+        if (value.Length == 0) value = "Disabled";
+        if (!value.Equals("Disabled", StringComparison.OrdinalIgnoreCase) && !TryParseHotkey(value, out _, out _))
+        {
+            SettingsStatus.Text = "Shortcut must include a modifier and a key, for example Ctrl+Alt+T.";
+            box.Text = GetHotkeyText(action);
+            return;
+        }
+        _settings.CustomHotkeys[action.ToString()] = value;
+        SavePreferences();
+        RegisterCustomHotkeys();
+        SettingsStatus.Text = "Shortcuts updated.";
+    }
     private void ToggleVisibility()
     {
         bool reveal = _userHidden || _edgePhase == EdgePhase.Hidden;
@@ -919,7 +1075,13 @@ private void UpdateStatusLed()
     {
         if (_focus.IsRunning) _focus.Pause();
         else if (_focus.IsPaused) _focus.Resume();
-        else _focus.Start(TimeSpan.FromMinutes(_settings.FocusMinutes));
+        else
+        {
+            int minutes = _settings.PomodoroEnabled 
+                ? (_settings.PomodoroIsBreak ? _settings.PomodoroBreakMinutes : _settings.PomodoroWorkMinutes)
+                : _settings.FocusMinutes;
+            _focus.Start(TimeSpan.FromMinutes(minutes));
+        }
         SetActivity(Activity.Focus);
         SavePreferences();
         UpdateTimer(); UpdateCompact();
@@ -927,8 +1089,25 @@ private void UpdateStatusLed()
     private void Reset_Click(object sender, RoutedEventArgs e)
     {
         _focus.Reset();
+        if (_settings.PomodoroEnabled)
+        {
+            _settings.PomodoroIsBreak = false;
+            _settings.PomodoroCyclesCompleted = 0;
+        }
         SavePreferences();
         UpdateTimer(); UpdateCompact();
+    }
+    private void Pomodoro_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.PomodoroEnabled = !_settings.PomodoroEnabled;
+        if (_settings.PomodoroEnabled)
+        {
+            _settings.PomodoroIsBreak = false;
+            _settings.PomodoroCyclesCompleted = 0;
+        }
+        SavePreferences();
+        UpdateTimer(); UpdateCompact();
+        Notify("Pomodoro mode", _settings.PomodoroEnabled ? "Enabled" : "Disabled", 2);
     }
     private void Preset_Click(object sender, RoutedEventArgs e)
     {
@@ -989,6 +1168,38 @@ private void UpdateStatusLed()
         if (int.TryParse(FocusMinutesBox.Text, out int minutes)) _settings.FocusMinutes = Math.Clamp(minutes, 1, 180);
         FocusMinutesBox.Text = _settings.FocusMinutes.ToString();
         SavePreferences(); UpdateTimer();
+    }
+    private void Pomodoro_Settings_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_ready || _updating) return;
+        _settings.PomodoroEnabled = PomodoroEnabledCheck.IsChecked == true;
+        if (!_settings.PomodoroEnabled)
+        {
+            _settings.PomodoroIsBreak = false;
+            _settings.PomodoroCyclesCompleted = 0;
+        }
+        SavePreferences(); UpdateTimer();
+    }
+    private void PomodoroWork_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (!_ready || _updating) return;
+        if (int.TryParse(PomodoroWorkBox.Text, out int minutes)) _settings.PomodoroWorkMinutes = Math.Clamp(minutes, 1, 180);
+        PomodoroWorkBox.Text = _settings.PomodoroWorkMinutes.ToString();
+        SavePreferences();
+    }
+    private void PomodoroBreak_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (!_ready || _updating) return;
+        if (int.TryParse(PomodoroBreakBox.Text, out int minutes)) _settings.PomodoroBreakMinutes = Math.Clamp(minutes, 1, 60);
+        PomodoroBreakBox.Text = _settings.PomodoroBreakMinutes.ToString();
+        SavePreferences();
+    }
+    private void PomodoroLongBreak_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (!_ready || _updating) return;
+        if (int.TryParse(PomodoroLongBreakBox.Text, out int minutes)) _settings.PomodoroLongBreakMinutes = Math.Clamp(minutes, 5, 60);
+        PomodoroLongBreakBox.Text = _settings.PomodoroLongBreakMinutes.ToString();
+        SavePreferences();
     }
     private void Display_Click(object sender, RoutedEventArgs e)
     {
