@@ -200,59 +200,5 @@ public partial class MainWindow
 
     private void UpdateCompactProgressRing(bool notice, bool focus, bool mediaPresent)
     {
-        double? progress = null;
-        string brushKey = "ArtworkDominantBrush";
-        string name = "";
-        if (!notice && focus && _focus.Duration > TimeSpan.Zero)
-        {
-            progress = 1 - _focus.Remaining.TotalSeconds / _focus.Duration.TotalSeconds;
-            brushKey = "TimerBrush";
-            name = _focus.IsPaused ? "Focus progress, paused" : "Focus progress";
-        }
-        else if (!notice && mediaPresent && _media.Snapshot.Duration > TimeSpan.Zero)
-        {
-            progress = _media.Snapshot.CurrentPosition.TotalSeconds / _media.Snapshot.Duration.TotalSeconds;
-            name = "Media progress";
-        }
-
-        if (!progress.HasValue)
-        {
-            CompactProgressArc.Visibility = Visibility.Collapsed;
-            CompactProgressArc.Data = null;
-            return;
-        }
-
-        double value = Math.Clamp(progress.Value, 0, 1);
-        CompactProgressArc.SetResourceReference(Shape.StrokeProperty, brushKey);
-        CompactProgressArc.Data = CreateProgressArc(value);
-        CompactProgressArc.Opacity = _focus.IsPaused && focus ? 0.55 : 0.95;
-        CompactProgressArc.Visibility = Visibility.Visible;
-        System.Windows.Automation.AutomationProperties.SetName(CompactProgressArc, $"{name}, {Math.Round(value * 100)} percent");
-    }
-
-    private static Geometry CreateProgressArc(double progress)
-    {
-        const double centerX = 37;
-        const double centerY = 17;
-        const double radiusX = 34;
-        const double radiusY = 15;
-        if (progress >= 0.999) return new EllipseGeometry(new Point(centerX, centerY), radiusX, radiusY);
-        double startAngle = -90;
-        double endAngle = startAngle + Math.Max(0.01, progress) * 360;
-        Point start = PointOnEllipse(centerX, centerY, radiusX, radiusY, startAngle);
-        Point end = PointOnEllipse(centerX, centerY, radiusX, radiusY, endAngle);
-        var figure = new PathFigure { StartPoint = start, IsClosed = false };
-        figure.Segments.Add(new ArcSegment(end, new Size(radiusX, radiusY), 0, progress > 0.5,
-            SweepDirection.Clockwise, true));
-        var geometry = new PathGeometry();
-        geometry.Figures.Add(figure);
-        if (geometry.CanFreeze) geometry.Freeze();
-        return geometry;
-    }
-
-    private static Point PointOnEllipse(double centerX, double centerY, double radiusX, double radiusY, double degrees)
-    {
-        double radians = degrees * Math.PI / 180d;
-        return new Point(centerX + radiusX * Math.Cos(radians), centerY + radiusY * Math.Sin(radians));
     }
 }

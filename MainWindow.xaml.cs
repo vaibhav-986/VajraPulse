@@ -19,12 +19,13 @@ public partial class MainWindow : Window
     private readonly PulseSettings _settings;
     private readonly IslandState _state = new();
     private readonly FocusTimer _focus = new();
-    private readonly AudioService _audio = new();
     private readonly MediaService _media = new();
     private readonly DispatcherTimer _tick = new() { Interval = TimeSpan.FromSeconds(1) };
-    private readonly DispatcherTimer _hover = new() { Interval = TimeSpan.FromMilliseconds(120) };
+    private readonly DispatcherTimer _hover = new() { Interval = TimeSpan.FromMilliseconds(650) };
     private readonly DispatcherTimer _leave = new() { Interval = TimeSpan.FromMilliseconds(800) };
     private readonly DispatcherTimer _edgeHide = new();
+    private readonly DispatcherTimer _quickHide = new() { Interval = TimeSpan.FromMilliseconds(220) };
+    private readonly DispatcherTimer _idleFade = new() { Interval = TimeSpan.FromSeconds(3) };
     private TrayService? _tray;
     private HotkeyService? _hotkey;
     private AppSlotHotkeyService? _appSlotHotkeys;
@@ -37,13 +38,15 @@ public partial class MainWindow : Window
     private FrameworkElement? _presentedModePanel;
     private DateTimeOffset _edgeRevealGraceUntil;
     private BatterySnapshot? _battery;
-    private float? _lastVolume;
     private string? _notice;
     private DateTimeOffset _noticeUntil;
     private int _ticks;
     private Activity _activity = Activity.Music;
-    private bool _activityChosen, _waveAnimating, _updatingActivityTabs;
-    private double _targetWidth = 140, _targetHeight = 36;
+    private bool _activityChosen, _updatingActivityTabs;
+    private bool _idleMinimal, _swipeTracking, _swipeHandled;
+    private Point _swipeStart;
+    private string? _animatedNotice;
+    private double _targetWidth = 140, _targetHeight = 40;
 
     public MainWindow()
     {
@@ -56,7 +59,6 @@ public partial class MainWindow : Window
             if (_ready && _settings.DockPosition != IslandDockPosition.TopCenter) PositionIsland();
         };
         _monitor = EnvironmentService.PrimaryScreenBounds();
-        IsVisibleChanged += (_, _) => UpdatePlaybackAnimation();
         _hotkey = new HotkeyService(this, ToggleFromShortcut);
         _appSlotHotkeys = new AppSlotHotkeyService(this, new Action<int>[]
         {
@@ -89,8 +91,23 @@ public partial class MainWindow : Window
             };
             _leave.Tick += (_, _) => { _leave.Stop(); if (!IsPointerOverInteractiveChrome() && !_pinned && !_featuresModal && !_dropHover && !_shelfDragging) Collapse(); };
             _edgeHide.Tick += (_, _) => { _edgeHide.Stop(); HideAtScreenEdge(); };
-            _focus.Completed += (_, _) =>
+            _quickHide.Tick += (_, _) =>
             {
+                _quickHide.Stop();
+            };
+            _idleFade.Tick += (_, _) =>
+            {
+                _idleFade.Stop();
+                if (_state.Mode == IslandMode.Compact && _notice == null && !_focus.IsRunning && !_focus.IsPaused
+                    && !_media.Snapshot.HasSession && !Island.IsMouseOver)
+                {
+                    _idleMinimal = true;
+                    UpdateCompact();
+                }
+            };
+        // _waveMeter.Tick += (_, _) => UpdateWaveLevels();
+        _focus.Completed += (_, _) =>
+        {
                 SavePreferences();
                 Notify("Focus complete", "Take a little breather.", 12);
                 ReactHearts();
@@ -115,10 +132,11 @@ public partial class MainWindow : Window
         {
             _closed = true;
             _tick.Stop(); _hover.Stop(); _leave.Stop(); _edgeHide.Stop();
+            _quickHide.Stop(); _idleFade.Stop();
             ShutdownEyes();
             SavePreferences();
             DisposeFeatures();
-            _tray?.Dispose(); _hotkey?.Dispose(); _appSlotHotkeys?.Dispose(); _audio.Dispose(); _media.Dispose();
+            _tray?.Dispose(); _hotkey?.Dispose(); _appSlotHotkeys?.Dispose(); _media.Dispose();
             HwndSource.FromHwnd(_handle)?.RemoveHook(WindowHook);
             Application.Current.Shutdown();
         };
@@ -162,12 +180,7 @@ public partial class MainWindow : Window
             (battery.IsCharging ? "↯ " : "") + (battery.Percent >= 0 ? $"{battery.Percent}%" : "Battery");
         BatteryText.ToolTip = battery.IsCharging ? "Charging" : battery.IsPluggedIn ? "Plugged in" : "On battery";
         BatteryText.Foreground = (Brush)FindResource(battery.HasBattery && battery.Percent is >= 0 and <= 20 && !battery.IsPluggedIn ? "TimerBrush" : "MutedBrush");
-        _audio.Refresh();
-        if (_audio.IsAvailable && _lastVolume.HasValue && Math.Abs(_lastVolume.Value - _audio.Volume) > 0.015f && !VolumeSlider.IsMouseCaptureWithin)
-            ShowLiveState(LiveKind.Volume, "Volume", _audio.IsMuted ? "Muted" : "System audio", _audio.IsMuted ? 0 : _audio.Volume, 2);
         DetectAudioChanges();
-        _lastVolume = _audio.IsAvailable ? _audio.Volume : null;
-        UpdateAudio();
         UpdateTimer();
         UpdateCompact();
     }
@@ -265,15 +278,7 @@ public partial class MainWindow : Window
     private void FocusTab_Click(object sender, RoutedEventArgs e) { if (!_updatingActivityTabs) SetActivity(Activity.Focus); }
     private void Satellite_Click(object sender, RoutedEventArgs e) { SetActivity(Activity.Music); Expand(true); }
 
-    private void UpdateAudio()
-    {
-        _updating = true;
-        if (!VolumeSlider.IsMouseCaptureWithin) VolumeSlider.Value = _audio.Volume * 100;
-        VolumeSlider.IsEnabled = MuteButton.IsEnabled = _audio.IsAvailable;
-        VolumeText.Text = _audio.IsAvailable ? _audio.IsMuted ? "Muted" : $"{Math.Round(_audio.Volume * 100)}%" : "N/A";
-        MuteButton.Content = _audio.IsMuted ? "" : "";
-        _updating = false;
-    }
+
 
     private void UpdateTimer()
     {
@@ -355,9 +360,9 @@ public partial class MainWindow : Window
         CompactIcon.Visibility = CompactArtwork.Visibility == Visibility.Visible ? Visibility.Collapsed : Visibility.Visible;
         CompactIcon.Foreground = CompactStatus.Foreground = (Brush)FindResource(focus && !notice ? "TimerBrush" : "TextBrush");
         CameraLens.Visibility = !notice && !focus && !mediaPresent ? Visibility.Visible : Visibility.Collapsed;
-        PlaybackBars.Visibility = !notice && !focus && mediaPresent ? Visibility.Visible : Visibility.Collapsed;
-        PlaybackBars.Opacity = _media.Snapshot.IsPlaying ? 1 : 0.45;
-        System.Windows.Automation.AutomationProperties.SetName(PlaybackBars, _media.Snapshot.IsPlaying ? "Playback is active" : "Media is paused");
+        // PlaybackBars.Visibility = !notice && !focus && mediaPresent ? Visibility.Visible : Visibility.Collapsed;
+        // PlaybackBars.Opacity = _media.Snapshot.IsPlaying ? 1 : 0.45;
+        // System.Windows.Automation.AutomationProperties.SetName(PlaybackBars, _media.Snapshot.IsPlaying ? "Playback is active" : "Media is paused");
         CompactRightColumn.Width = new GridLength(focus ? 40 : 24);
         Grid.SetColumn(CompactTitle, notice ? 1 : clock ? 0 : 2);
         CompactTitle.HorizontalAlignment = notice ? HorizontalAlignment.Left : clock ? HorizontalAlignment.Center : HorizontalAlignment.Right;
@@ -369,37 +374,28 @@ public partial class MainWindow : Window
         CompactButton.Visibility = _state.Mode == IslandMode.Compact && !live ? Visibility.Visible : Visibility.Collapsed;
         LiveStatePanel.Visibility = _state.Mode == IslandMode.Compact && live ? Visibility.Visible : Visibility.Collapsed;
         UpdateLiveStateVisual();
+        bool idle = !notice && !focus && !mediaPresent && _state.Mode == IslandMode.Compact
+            && !Island.IsMouseOver;
+        if (!idle) { _idleFade.Stop(); _idleMinimal = false; }
+        else if (!_idleMinimal && !_idleFade.IsEnabled) _idleFade.Start();
         if (_state.Mode == IslandMode.Compact)
         {
-            double width = notice ? live ? 300 : 320 : focus ? 184 : mediaPresent ? 176 : _settings.ShowClock ? 140 : 124;
+            double width = notice ? live ? 300 : 320 : focus ? 184 : mediaPresent ? 176 : _idleMinimal ? 104 : _settings.ShowClock ? 140 : 124;
             CompactRow.Width = width - 20;
-            ResizeIsland(width, notice ? live ? 52 : 42 : 36);
+            ResizeIsland(width, notice ? live ? 52 : 42 : 40);
             ApplyAccessoryLayout(width);
         }
         SatelliteButton.Visibility = _state.Mode == IslandMode.Compact && focus && mediaPresent && !notice ? Visibility.Visible : Visibility.Collapsed;
-        UpdateCompactProgressRing(notice, focus, mediaPresent);
-        UpdateActivity();
-        UpdatePlaybackAnimation();
-        FlushEyeEmotion();
-    }
-
-    private void UpdatePlaybackAnimation()
-    {
-        bool run = _media.Snapshot.IsPlaying && _state.Mode == IslandMode.Compact && !_focus.IsRunning && !_focus.IsPaused && _notice == null && !_settings.ReducedMotion && IsVisible;
-        if (_waveAnimating == run) return;
-        _waveAnimating = run;
-        var bars = new[] { Wave1, Wave2, Wave3, Wave4 };
-        for (int i = 0; i < bars.Length; i++)
+        UpdateStatusLed();
+        AnimateElementOpacity(CompactTitle, _idleMinimal ? 0 : 1);
+        AnimateElementOpacity(CameraLens, _idleMinimal ? 0 : 1);
+        if (_notice != _animatedNotice)
         {
-            bars[i].BeginAnimation(HeightProperty, null);
-            if (run)
-            {
-                var animation = new DoubleAnimation(4 + i % 2 * 2, 12 + i % 3 * 3, TimeSpan.FromMilliseconds(360 + i * 95))
-                { AutoReverse = true, RepeatBehavior = RepeatBehavior.Forever, EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut } };
-                Timeline.SetDesiredFrameRate(animation, 20);
-                bars[i].BeginAnimation(HeightProperty, animation);
-            }
+            _animatedNotice = _notice;
+            if (_notice != null && _state.Mode == IslandMode.Compact) AnimateNoticeIn();
         }
+        UpdateActivity();
+        FlushEyeEmotion();
     }
 
     private void UpdateExpandedSizing()
@@ -440,6 +436,8 @@ public partial class MainWindow : Window
         if (_edgePhase != EdgePhase.Visible) ForceEdgeVisible();
         _leave.Stop(); _hover.Stop();
         _pinned = pinned;
+        AnimateScale(1.0);
+        AnimateElementOpacity(NotchSeam, 0.55);
         _state.Expand();
         ApplyMode();
     }
@@ -474,7 +472,9 @@ public partial class MainWindow : Window
         AppCatalogPanel.Visibility = settings && _catalogOpen ? Visibility.Visible : Visibility.Collapsed;
         FrameworkElement? desiredPanel = compact ? null : settings ? _catalogOpen ? AppCatalogPanel : SettingsPanel : ExpandedPanel;
         if (!compact) UpdateExpandedSizing();
-        Island.CornerRadius = new CornerRadius(compact ? 24 : 32);
+        double bottomRadius = compact ? 20 : 32;
+        Island.CornerRadius = new CornerRadius(0, 0, bottomRadius, bottomRadius);
+        IslandSheen.CornerRadius = Island.CornerRadius;
         if (desiredPanel != null && !ReferenceEquals(_presentedModePanel, desiredPanel)) AnimatePanelIn(desiredPanel, 0);
         _presentedModePanel = desiredPanel;
         UpdateCompact();
@@ -511,10 +511,10 @@ public partial class MainWindow : Window
         target.BeginAnimation(property, null);
         target.SetValue(property, to);
         if (!AnimationsEnabled || Math.Abs(from - to) < 0.01) return;
-        target.BeginAnimation(property, new DoubleAnimation(from, to, TimeSpan.FromMilliseconds(220))
+        target.BeginAnimation(property, new DoubleAnimation(from, to, TimeSpan.FromMilliseconds(260))
         {
             FillBehavior = FillBehavior.Stop,
-            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            EasingFunction = new BackEase { Amplitude = 0.22, EasingMode = EasingMode.EaseOut }
         }, HandoffBehavior.SnapshotAndReplace);
     }
 
@@ -537,6 +537,15 @@ public partial class MainWindow : Window
         Island.BeginAnimation(HeightProperty, null);
         Island.SetValue(WidthProperty, _targetWidth);
         Island.SetValue(HeightProperty, _targetHeight);
+        IslandScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        IslandScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        IslandScale.ScaleX = IslandScale.ScaleY = 1;
+        NotchSeam.BeginAnimation(OpacityProperty, null);
+        NotchSeam.Opacity = 0.55;
+        _quickHide.Stop();
+        _idleFade.Stop();
+        _idleMinimal = false;
+        _animatedNotice = null;
         WindowChrome.BeginAnimation(OpacityProperty, null);
         WindowChrome.SetValue(OpacityProperty, 1d);
         WindowChromeOffset.BeginAnimation(TranslateTransform.YProperty, null);
@@ -549,7 +558,6 @@ public partial class MainWindow : Window
         else if (_edgePhase == EdgePhase.Revealing) _edgePhase = EdgePhase.Visible;
         ApplyAccessoryLayout(_targetWidth);
         ResetEyeMotion();
-        UpdatePlaybackAnimation();
     }
 
     private void LoadPreferences()
@@ -595,15 +603,15 @@ public partial class MainWindow : Window
         _edgeHide.Start();
     }
 
-    private void HideAtScreenEdge()
+    private void HideAtScreenEdge(bool force = false)
     {
         if (!_ready || _closed || _userHidden || _edgePhase != EdgePhase.Visible || _state.Mode != IslandMode.Compact) return;
-        if (_pointerInEdgeEngagementZone || IsPointerOverInteractiveChrome() || _featuresModal || _dropHover || _shelfDragging)
+        if (!force && (_pointerInEdgeEngagementZone || IsPointerOverInteractiveChrome() || _featuresModal || _dropHover || _shelfDragging))
         {
             ScheduleEdgeHide(500);
             return;
         }
-        if (DateTimeOffset.UtcNow < _edgeRevealGraceUntil)
+        if (!force && DateTimeOffset.UtcNow < _edgeRevealGraceUntil)
         {
             ScheduleEdgeHide(200);
             return;
@@ -612,6 +620,8 @@ public partial class MainWindow : Window
         _edgeHide.Stop();
         _hover.Stop();
         _leave.Stop();
+        _quickHide.Stop();
+        _idleFade.Stop();
         if (EyesOnScreen()) PlaySleepy();
         _edgePhase = EdgePhase.Retreating;
         int version = ++_edgeTransitionVersion;
@@ -631,18 +641,19 @@ public partial class MainWindow : Window
             return;
         }
 
+        double retreatOffset = -Math.Max(24, _targetHeight);
         double fromOpacity = WindowChrome.Opacity;
         double fromY = WindowChromeOffset.Y;
         WindowChrome.BeginAnimation(OpacityProperty, null);
         WindowChrome.SetValue(OpacityProperty, 0d);
         WindowChromeOffset.BeginAnimation(TranslateTransform.YProperty, null);
-        WindowChromeOffset.Y = -6;
+        WindowChromeOffset.Y = retreatOffset;
         var fade = new DoubleAnimation(fromOpacity, 0, TimeSpan.FromMilliseconds(120))
         {
             FillBehavior = FillBehavior.Stop,
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
         };
-        var slide = new DoubleAnimation(fromY, -6, TimeSpan.FromMilliseconds(120))
+        var slide = new DoubleAnimation(fromY, retreatOffset, TimeSpan.FromMilliseconds(120))
         {
             FillBehavior = FillBehavior.Stop,
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
@@ -694,12 +705,13 @@ public partial class MainWindow : Window
             CompleteReveal();
             return;
         }
+        double revealOffset = -Math.Max(24, _targetHeight);
         var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(160))
         {
             FillBehavior = FillBehavior.Stop,
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
-        var slide = new DoubleAnimation(-6, 0, TimeSpan.FromMilliseconds(160))
+        var slide = new DoubleAnimation(revealOffset, 0, TimeSpan.FromMilliseconds(160))
         {
             FillBehavior = FillBehavior.Stop,
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
@@ -727,7 +739,7 @@ public partial class MainWindow : Window
         if (_handle == IntPtr.Zero) return;
         double scale = Math.Max(96, GetDpiForWindow(_handle)) / 96d;
         int left = CalculateWindowLeft(scale);
-        int top = (int)Math.Round(_monitor.Top + (_settings.TopOffset - 8) * scale);
+        int top = (int)Math.Round(_monitor.Top + _settings.TopOffset * scale);
         SetWindowPos(_handle, new IntPtr(-1), left, top, 0, 0, 0x11);
     }
     private IntPtr WindowHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -778,16 +790,114 @@ public partial class MainWindow : Window
     {
         _edgeHide.Stop();
         _leave.Stop();
+        _quickHide.Stop();
+        if (_state.Mode == IslandMode.Compact)
+        {
+            if (_idleMinimal) { _idleMinimal = false; UpdateCompact(); }
+            AnimateScale(1.03);
+            AnimateElementOpacity(NotchSeam, 0.85);
+        }
         if (_settings.HoverExpand && _state.Mode == IslandMode.Compact) { _hover.Stop(); _hover.Start(); }
     }
     private void Island_MouseLeave(object sender, MouseEventArgs e)
     {
         _hover.Stop();
         _hoverRequiresReentry = false;
+        AnimateScale(1.0);
+        AnimateElementOpacity(NotchSeam, 0.55);
+        _quickHide.Stop();
+        _quickHide.Start();
         if (!_pinned && _state.Mode == IslandMode.Expanded) { _leave.Stop(); _leave.Start(); }
         else if (_state.Mode == IslandMode.Compact) ScheduleEdgeHide(500);
     }
-    private void Compact_Click(object sender, RoutedEventArgs e) => Expand(true);
+    private void Island_PreviewLeftDown(object sender, MouseButtonEventArgs e)
+    {
+        if (_state.Mode != IslandMode.Compact) return;
+        _swipeStart = e.GetPosition(this);
+        _swipeTracking = true;
+        _swipeHandled = false;
+    }
+    private void Island_PreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (!_swipeTracking || e.LeftButton != MouseButtonState.Pressed) return;
+        double dy = e.GetPosition(this).Y - _swipeStart.Y;
+        if (Math.Abs(dy) < 16) return;
+        _swipeTracking = false;
+        _swipeHandled = true;
+        if (dy > 0) { _hoverRequiresReentry = false; Expand(true); }
+        else { _hoverRequiresReentry = true; HideAtScreenEdge(true); }
+    }
+    private void Island_PreviewLeftUp(object sender, MouseButtonEventArgs e) => _swipeTracking = false;
+    private void Compact_Click(object sender, RoutedEventArgs e)
+    {
+        if (_swipeHandled) { _swipeHandled = false; return; }
+        Expand(true);
+    }
+private void UpdateStatusLed()
+    {
+        bool compact = _state.Mode == IslandMode.Compact;
+        StatusLed.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
+        StatusLed.Opacity = compact ? 0.95 : 0;
+        string key = _desktopActivities.Current?.Kind == PulseActivityKind.Privacy ? "DangerBrush"
+            : _focus.IsRunning || _focus.IsPaused ? "TimerBrush"
+            : _media.Snapshot.IsPlaying ? "AccentBrush"
+            : _battery?.IsCharging == true ? "MintBrush"
+            : "MutedBrush";
+        StatusLed.SetResourceReference(System.Windows.Shapes.Shape.FillProperty, key);
+    }
+
+
+
+    private void AnimateScale(double to)
+    {
+        double from = IslandScale.ScaleX;
+        IslandScale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
+        IslandScale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
+        IslandScale.ScaleX = IslandScale.ScaleY = to;
+        if (!AnimationsEnabled || Math.Abs(from - to) < 0.001) return;
+        var animation = new DoubleAnimation(from, to, TimeSpan.FromMilliseconds(190))
+        {
+            FillBehavior = FillBehavior.Stop,
+            EasingFunction = new BackEase { Amplitude = 0.35, EasingMode = EasingMode.EaseOut }
+        };
+        IslandScale.BeginAnimation(ScaleTransform.ScaleXProperty, animation, HandoffBehavior.SnapshotAndReplace);
+        IslandScale.BeginAnimation(ScaleTransform.ScaleYProperty, animation.Clone(), HandoffBehavior.SnapshotAndReplace);
+    }
+
+    private void AnimateElementOpacity(UIElement target, double to, Action? completed = null)
+    {
+        double from = target.Opacity;
+        target.BeginAnimation(OpacityProperty, null);
+        target.Opacity = to;
+        if (!AnimationsEnabled || Math.Abs(from - to) < 0.01) { completed?.Invoke(); return; }
+        var fade = new DoubleAnimation(from, to, TimeSpan.FromMilliseconds(160))
+        {
+            FillBehavior = FillBehavior.Stop,
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+        };
+        if (completed != null) fade.Completed += (_, _) => completed();
+        target.BeginAnimation(OpacityProperty, fade, HandoffBehavior.SnapshotAndReplace);
+    }
+
+    private void AnimateNoticeIn()
+    {
+        var slide = CompactRow.RenderTransform as TranslateTransform;
+        if (slide == null) { slide = new TranslateTransform(); CompactRow.RenderTransform = slide; }
+        slide.BeginAnimation(TranslateTransform.YProperty, null);
+        slide.Y = 0;
+        CompactRow.BeginAnimation(OpacityProperty, null);
+        CompactRow.Opacity = 1;
+        if (!AnimationsEnabled) return;
+        var drop = new DoubleAnimation(-9, 0, TimeSpan.FromMilliseconds(230))
+        {
+            FillBehavior = FillBehavior.Stop,
+            EasingFunction = new BackEase { Amplitude = 0.3, EasingMode = EasingMode.EaseOut }
+        };
+        var fade = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(200)) { FillBehavior = FillBehavior.Stop };
+        slide.BeginAnimation(TranslateTransform.YProperty, drop, HandoffBehavior.SnapshotAndReplace);
+        CompactRow.BeginAnimation(OpacityProperty, fade, HandoffBehavior.SnapshotAndReplace);
+    }
+
     private void Collapse_Click(object sender, RoutedEventArgs e) { _hoverRequiresReentry = true; Collapse(); }
     private void Settings_Click(object sender, RoutedEventArgs e) => OpenSettings();
     private void Island_RightClick(object sender, MouseButtonEventArgs e) { OpenSettings(); e.Handled = true; }
@@ -829,14 +939,7 @@ public partial class MainWindow : Window
             SavePreferences(); UpdateTimer();
         }
     }
-    private void Volume_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (!_ready || _updating) return;
-        _audio.SetVolume((float)(e.NewValue / 100));
-        _lastVolume = _audio.Volume;
-        VolumeText.Text = $"{Math.Round(e.NewValue)}%";
-    }
-    private void Mute_Click(object sender, RoutedEventArgs e) { _audio.ToggleMute(); UpdateAudio(); }
+
     private void ApplyRailVisibility()
     {
         SystemRailButton.Visibility = _settings.ShowSystemRailButton ? Visibility.Visible : Visibility.Collapsed;

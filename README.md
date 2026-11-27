@@ -1,14 +1,21 @@
-# Vajra Pulse
+﻿# Vajra Pulse
 
-**Version 1.6.0**
+**Version 1.7.0**
 
 A native Windows desktop island with a true-black compact pill, single-activity expansion, live Windows integrations, five app-launch slots, local system activity, per-app audio mixing, and cute googly eyes. No browser account, camera access, cloud service, or telemetry is required.
+
+## 1.7.0 Updates
+- Removed system volume controls from Settings panel for a cleaner, more focused interface.
+- Removed Quick Controls popup that appeared on hover at the top center.
+- Streamlined compact mode interactions by removing hover-triggered volume controls.
+- Per-app volume mixer in Tools → Mixer remains fully functional for precise audio control.
+- Simplified UI reduces visual clutter and improves minimal idle aesthetic.
 
 ## 1.6.0 Updates
 - Added Cute Companion, simulated Glass, and Neon Pulse design modes.
 - Added locally saved Googly, Kawaii, and Starry eye styles.
 - Added top-left, top-center, and top-right docking with idle auto-retreat and edge reveal.
-- Music artwork can now accent the music timeline, playback bars, and compact media-progress ring.
+- Music artwork can now accent the music timeline, playback bars, and compact media-progress bar.
 - Refined eye reactions, compact progress visuals, and settings persistence.
 
 ## Run
@@ -25,8 +32,8 @@ Double-click `Start-VajraPulse.cmd`. The ordinary app uses the installed .NET 8 
 - After a short idle delay, the compact island retreats completely. Move the pointer to its selected top-left, top-center, or top-right screen-edge zone to reveal it again.
 - Click to keep it open while interacting; click away or press Escape to tuck it away.
 - Ctrl + Alt + Space expands/collapses or reveals the island.
-- Choose Cute Companion, simulated Glass, or Neon Pulse design mode in Settings. Three locally saved eye styles—Googly, Kawaii, and Starry—remain available in every mode.
-- Music artwork can color only the music timeline, playback bars, and compact media-progress ring; extracted colors remain in memory and are never uploaded or persisted.
+- Choose Cute Companion, simulated Glass, or Neon Pulse design mode in Settings. Three locally saved eye stylesâ€”Googly, Kawaii, and Starryâ€”remain available in every mode.
+- Music artwork can color only the music timeline, playback bars, and compact media-progress bar; extracted colors remain in memory and are never uploaded or persisted.
 - The googly eyes follow your pointer, blink, and react when apps open or close.
 - Use the Music, Focus, Files, Calendar, Alerts, and Tools tabs for one activity at a time.
 - The optional side buttons open System tools, Bluetooth Settings, and Wi-Fi Settings; each can be shown or hidden independently in Settings.
@@ -42,13 +49,13 @@ Running and paused focus sessions are saved locally. If Vajra Pulse closes durin
 
 **Start with Windows** is available in Settings and is off until explicitly enabled. It creates or removes only the current user's `VajraPulse` Run entry and does not change machine-wide startup settings.
 
-### Charging, volume, and brightness
+### Charging and brightness
 
-Power connection changes trigger a green charging/power state. Volume, mute, and brightness changes appear as brief icon-and-level states rather than a dashboard. These do not replace or suppress Windows' own flyouts.
+Power connection changes trigger a green charging/power state. Brightness changes appear as brief icon-and-level states rather than a dashboard. These do not replace or suppress Windows' own flyouts.
 
-System volume and mute are available in Settings. Internal-display brightness is available when the monitor exposes Windows WMI brightness control; unsupported displays show an explicit unavailable state. Device sensing does not change system controls. Changes are made only when you operate a control.
+Internal-display brightness control is available in Settings when the monitor exposes Windows WMI brightness control; unsupported displays show an explicit unavailable state. Device sensing does not change system controls. Changes are made only when you operate a control.
 
-**Test animation** cycles through clearly labeled charging, volume, brightness, and headphone previews without changing power, audio, display, or connection state.
+**Test animation** cycles through clearly labeled charging, brightness, and headphone previews without changing power, display, or connection state.
 
 ### Headphones
 
@@ -64,13 +71,13 @@ The separate Bluetooth and Wi-Fi buttons show best-effort local status and open 
 
 Settings provides exactly five app slots. Choose or replace a slot to open Vajra Pulse's searchable installed-app list. Traditional desktop entries come from the current-user and shared Start Menu Programs folders; packaged Windows entries come from the current user's registered app list. Search is local, lazy, bounded, and never sent anywhere. Vajra Pulse does not scan Program Files, uninstall registry records, other users' private profiles, or the network.
 
-Select an app to save it to the slot, then open it explicitly from **Tools → Apps**. Packaged apps keep their Windows app identity, and desktop apps keep their Start Menu shortcut behavior. **Advanced browse** remains available for a local `.exe` or `.lnk` that does not appear in the catalog. Targets are rechecked before launch, and missing or removed apps are shown as unavailable.
+Select an app to save it to the slot, then open it explicitly from **Tools â†’ Apps**. Packaged apps keep their Windows app identity, and desktop apps keep their Start Menu shortcut behavior. **Advanced browse** remains available for a local `.exe` or `.lnk` that does not appear in the catalog. Targets are rechecked before launch, and missing or removed apps are shown as unavailable.
 
 Nothing launches during catalog loading, searching, selection, startup, settings load, or when the Apps panel opens. Clearing a slot removes only Vajra Pulse's local reference; it never changes or uninstalls the selected application. The catalog, search text, icons, and launch history are not persisted.
 
 ### Per-app volume mixer
 
-**Tools → Mixer** lists active Core Audio application sessions on the current default output device. Each listed app has its own volume slider and mute button; changing one does not intentionally change the master volume or another app. Apps with several audio sessions are grouped, and mixed levels are identified before a new level is applied to that group.
+**Tools â†’ Mixer** lists active Core Audio application sessions on the current default output device. Each listed app has its own volume slider and mute button; changing one does not intentionally change the master volume or another app. Apps with several audio sessions are grouped, and mixed levels are identified before a new level is applied to that group.
 
 The list can change while apps start, stop, or move to another output device. Enumerating volume sessions does not capture, record, or upload audio and does not request microphone access. Automated verification reads session state but never changes real app volume.
 
@@ -86,7 +93,7 @@ Downloads in the local Downloads folder appear automatically while a browser or 
 
 ### Local file shelf
 
-Drag local files/folders onto the pill, or choose **Files → Add files**. Drag a shelved item back into another app to use it. **Show folder** reveals the containing folder.
+Drag local files/folders onto the pill, or choose **Files â†’ Add files**. Drag a shelved item back into another app to use it. **Show folder** reveals the containing folder.
 
 The shelf stores up to 30 local path references. It never uploads, moves, deletes, or opens files automatically. Removing a shortcut does not delete its source. Drag-out permits copy/link effects, not move. Network-share paths are not added. References are saved locally, and missing paths are omitted on startup.
 
@@ -102,7 +109,7 @@ The compact pill's eyes follow the pointer across the desktop, blink now and the
 
 ### Calendar and meeting reminders
 
-Choose **Calendar → Import .ics** and select an exported local calendar file. The next timed meeting appears with its local start/end time and a **Join meeting** button when it contains a valid HTTPS link. A reminder appears within 15 minutes of the next meeting. Importing does not sign into Google, Outlook, or any other service; re-import the export when it changes.
+Choose **Calendar â†’ Import .ics** and select an exported local calendar file. The next timed meeting appears with its local start/end time and a **Join meeting** button when it contains a valid HTTPS link. A reminder appears within 15 minutes of the next meeting. Importing does not sign into Google, Outlook, or any other service; re-import the export when it changes.
 
 UTC, local/floating, known TZID, all-day, DURATION, and simple DAILY/WEEKLY recurrence with INTERVAL, COUNT, UNTIL, BYDAY, and EXDATE are supported. All-day events are not shown as meetings. Unsupported recurrence features, unknown timezones, and recurrence overrides are reported rather than silently fabricated. MONTHLY/YEARLY recurrence and arbitrary custom VTIMEZONE definitions are not supported in this version.
 
@@ -150,3 +157,4 @@ Preferences, visual mode, eye style, dock position, artwork-accent preference, s
 - `UI/PulseTheme.xaml`: native visual theme.
 - `tests/`: standalone regression and desktop smoke tests.
 - `packaging/`: optional notification-capable packaging and opt-in installation.
+

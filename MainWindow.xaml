@@ -10,7 +10,7 @@
  KeyDown="Window_KeyDown" Deactivated="Window_Deactivated">
  <Grid x:Name="WindowChrome">
   <Grid.RenderTransform><TranslateTransform x:Name="WindowChromeOffset" /></Grid.RenderTransform>
-  <StackPanel x:Name="SideRail" Width="32" Margin="0,8,0,0" VerticalAlignment="Top" HorizontalAlignment="Center"
+  <StackPanel x:Name="SideRail" Width="32" Margin="0,0,0,0" VerticalAlignment="Top" HorizontalAlignment="Center"
    MouseEnter="InteractiveChrome_MouseEnter" MouseLeave="InteractiveChrome_MouseLeave">
    <StackPanel.RenderTransform><TranslateTransform x:Name="SideRailPosition" X="104" /></StackPanel.RenderTransform>
    <Button x:Name="SystemRailButton" Style="{StaticResource RailButton}" Content="&#xE950;" Click="SystemRail_Click"
@@ -20,7 +20,7 @@
    <Button x:Name="WifiRailButton" Style="{StaticResource RailButton}" Content="&#xE701;" Click="WifiRail_Click"
     ToolTip="Checking Wi-Fi" AutomationProperties.Name="Open Wi-Fi settings" />
   </StackPanel>
-  <Button x:Name="SatelliteButton" Width="34" Height="36" Margin="0,8,0,0"
+  <Button x:Name="SatelliteButton" Width="34" Height="40" Margin="0,0,0,0"
    VerticalAlignment="Top" HorizontalAlignment="Center" Visibility="Collapsed"
    Style="{StaticResource GhostButton}" Background="{DynamicResource IslandBrush}" Padding="5,0"
    Click="Satellite_Click" ToolTip="Open music" AutomationProperties.Name="Open secondary music activity">
@@ -30,12 +30,45 @@
     <Image x:Name="SatelliteArtwork" Stretch="UniformToFill"><Image.Clip><RectangleGeometry Rect="0,0,24,24" RadiusX="6" RadiusY="6" /></Image.Clip></Image>
    </Grid>
   </Button>
-  <Border x:Name="Island" Width="140" Height="36" VerticalAlignment="Top" HorizontalAlignment="Center"
-   Margin="0,8,0,0" Background="{DynamicResource IslandBrush}" BorderBrush="{DynamicResource IslandBorderBrush}" BorderThickness="1" CornerRadius="24" ClipToBounds="True"
-   Effect="{DynamicResource IslandEffect}"
+  <Grid x:Name="NotchGlowLayer" Width="{Binding ActualWidth, ElementName=Island}" Height="26" VerticalAlignment="Top" HorizontalAlignment="Center" IsHitTestVisible="False">
+   <Ellipse Width="92" Height="28" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-34,-5,0,0" Fill="{DynamicResource AccentBrush}" Opacity="0.4">
+    <Ellipse.OpacityMask><RadialGradientBrush><GradientStop Color="#FFFFFFFF" Offset="0" /><GradientStop Color="#00FFFFFF" Offset="1" /></RadialGradientBrush></Ellipse.OpacityMask>
+   </Ellipse>
+   <Ellipse Width="92" Height="28" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,-5,-34,0" Fill="{DynamicResource AccentBrush}" Opacity="0.4">
+    <Ellipse.OpacityMask><RadialGradientBrush><GradientStop Color="#FFFFFFFF" Offset="0" /><GradientStop Color="#00FFFFFF" Offset="1" /></RadialGradientBrush></Ellipse.OpacityMask>
+   </Ellipse>
+  </Grid>
+  <Border x:Name="Island" Width="140" Height="40" VerticalAlignment="Top" HorizontalAlignment="Center"
+   Margin="0,0,0,0" Background="{DynamicResource IslandBrush}" BorderBrush="Transparent" BorderThickness="0" CornerRadius="0,0,20,20" ClipToBounds="False"
+   Effect="{DynamicResource IslandEffect}" RenderTransformOrigin="0.5,0"
+   PreviewMouseLeftButtonDown="Island_PreviewLeftDown" PreviewMouseMove="Island_PreviewMouseMove" PreviewMouseLeftButtonUp="Island_PreviewLeftUp"
    MouseEnter="Island_MouseEnter" MouseLeave="Island_MouseLeave" MouseRightButtonUp="Island_RightClick">
+   <Border.RenderTransform><ScaleTransform x:Name="IslandScale" ScaleX="1" ScaleY="1" /></Border.RenderTransform>
    <Grid>
-    <Button x:Name="CompactButton" Style="{StaticResource GhostButton}" Padding="10,0" Click="Compact_Click"
+    <Path x:Name="LeftShoulder" Width="12" Height="12" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-12,0,0,0" Fill="{DynamicResource IslandShoulderBrush}" Data="M0,0 Q12,0 12,12 L12,0 Z" IsHitTestVisible="False" />
+    <Path x:Name="RightShoulder" Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,0,-12,0" Fill="{DynamicResource IslandShoulderBrush}" Data="M12,0 Q0,0 0,12 L0,0 Z" IsHitTestVisible="False" />
+    <Border x:Name="IslandSheen" CornerRadius="0,0,20,20" IsHitTestVisible="False">
+     <Border.Background>
+      <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+       <GradientStop Color="#1AFFFFFF" Offset="0" />
+       <GradientStop Color="#00FFFFFF" Offset="0.42" />
+       <GradientStop Color="#16000000" Offset="1" />
+      </LinearGradientBrush>
+     </Border.Background>
+    </Border>
+    <Border x:Name="NotchSeam" Height="1.5" VerticalAlignment="Top" Background="{DynamicResource AccentBrush}" Opacity="0.55" IsHitTestVisible="False">
+     <Border.OpacityMask>
+      <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+       <GradientStop Color="#00FFFFFF" Offset="0" />
+       <GradientStop Color="#FFFFFFFF" Offset="0.5" />
+       <GradientStop Color="#00FFFFFF" Offset="1" />
+      </LinearGradientBrush>
+     </Border.OpacityMask>
+    </Border>
+    <Ellipse x:Name="StatusLed" Width="4" Height="4" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,5,9,0" Fill="{DynamicResource AccentBrush}" IsHitTestVisible="False">
+     <Ellipse.Effect><DropShadowEffect Color="#FFFFFFFF" BlurRadius="6" ShadowDepth="0" Opacity="0.8" /></Ellipse.Effect>
+    </Ellipse>
+    <Button x:Name="CompactButton" Style="{StaticResource GhostButton}" Padding="7,0" Click="Compact_Click"
      PreviewMouseLeftButtonDown="Compact_PreviewLeftDown" PreviewMouseRightButtonDown="Compact_PreviewRightDown"
      ToolTip="Vajra Pulse · Click to expand · Right-click for settings" AutomationProperties.Name="Expand Vajra Pulse">
      <Grid x:Name="CompactRow" Width="120">
@@ -48,17 +81,12 @@
        </Border>
        <TextBlock x:Name="CompactTitle" Grid.Column="0" FontSize="11" FontWeight="Medium" HorizontalAlignment="Center" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
        <TextBlock x:Name="CompactStatus" Grid.Column="2" FontSize="13" FontWeight="Medium" HorizontalAlignment="Right" VerticalAlignment="Center" />
-       <StackPanel x:Name="PlaybackBars" Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Visibility="Collapsed" AutomationProperties.Name="Playback is active">
-        <Rectangle x:Name="Wave1" Width="2" Height="5" RadiusX="1" Fill="{DynamicResource ArtworkDominantBrush}" Margin="0,0,2,0" />
-        <Rectangle x:Name="Wave2" Width="2" Height="12" RadiusX="1" Fill="{DynamicResource ArtworkMutedBrush}" Margin="0,0,2,0" />
-        <Rectangle x:Name="Wave3" Width="2" Height="17" RadiusX="1" Fill="{DynamicResource ArtworkDominantBrush}" Margin="0,0,2,0" />
-        <Rectangle x:Name="Wave4" Width="2" Height="8" RadiusX="1" Fill="{DynamicResource ArtworkMutedBrush}" />
-       </StackPanel>
-       <Border x:Name="CameraLens" Grid.Column="2" Width="10" Height="10" CornerRadius="5" HorizontalAlignment="Right" VerticalAlignment="Center" BorderBrush="#121923" BorderThickness="1">
-        <Border.Background><RadialGradientBrush><GradientStop Color="#14223C" Offset="0" /><GradientStop Color="#07090E" Offset="1" /></RadialGradientBrush></Border.Background>
-        <Ellipse Width="2" Height="2" Fill="#314369" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="2" />
+       <Border x:Name="CameraLens" Grid.Column="2" Width="17" Height="8" CornerRadius="4" HorizontalAlignment="Right" VerticalAlignment="Center" Background="#1A2436" BorderBrush="#2E4968" BorderThickness="0.5">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+         <Ellipse Width="3" Height="3" Fill="#4E7BB8" Margin="0,0,2.5,0" />
+         <Ellipse Width="2.4" Height="2.4" Fill="{DynamicResource AccentBrush}" />
+        </StackPanel>
        </Border>
-       <Path x:Name="CompactProgressArc" Grid.ColumnSpan="3" Width="74" Height="34" Stroke="{DynamicResource ArtworkDominantBrush}" StrokeThickness="2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" IsHitTestVisible="False" />
        <Grid x:Name="EyeCluster" Grid.ColumnSpan="3" HorizontalAlignment="Center" VerticalAlignment="Center" IsHitTestVisible="False">
         <Grid.RenderTransform><TranslateTransform x:Name="EyeClusterOffset" /></Grid.RenderTransform>
         <StackPanel Orientation="Horizontal">
@@ -86,17 +114,14 @@
           <Path x:Name="LeftSleepyLid" Data="M4,11 Q12,17 20,11" Stroke="#17171B" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0" />
           <Path x:Name="LeftCuriousBrow" Data="M5,5 Q12,1 19,5" Stroke="#17171B" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0" />
           <Path x:Name="LeftHappyArc" Data="M5,15 Q12,5.5 19,15" Stroke="#17171B" StrokeThickness="2.2" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0" />
-          <Path x:Name="LeftSadBrow" Data="M4,8 L16,3" Stroke="#17171B" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,1,0,0" />
-          <Grid x:Name="LeftTear" Width="6" Height="9" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="1,0,0,-4" Opacity="0">
-           <Grid.RenderTransform><TranslateTransform x:Name="LeftTearOffset" /></Grid.RenderTransform>
-           <Path Data="M3,0 C4.4,2.4 5.6,4 5.6,5.6 A2.8,2.8 0 1 1 0.4,5.6 C0.4,4 1.6,2.4 3,0 Z" Fill="#A9DDFF" Stroke="#7FC3F0" StrokeThickness="0.5" />
-           <Ellipse Width="1.5" Height="1.5" Fill="White" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1.8,4" />
+           <Path x:Name="LeftSadBrow" Data="M4,8 L16,3" Stroke="#17171B" StrokeThickness="1.8" StrokeStartLineCap="Round" StrokeEndLineCap="Round" Opacity="0" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,1,0,0" />
+           <Grid x:Name="LeftTear" Width="6" Height="9" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="1,0,0,-4" Opacity="0">
+            <Grid.RenderTransform><TranslateTransform x:Name="LeftTearOffset" /></Grid.RenderTransform>
+            <Path Data="M3,0 C4.4,2.4 5.6,4 5.6,5.6 A2.8,2.8 0 1 1 0.4,5.6 C0.4,4 1.6,2.4 3,0 Z" Fill="#A9DDFF" Stroke="#7FC3F0" StrokeThickness="0.5" />
+            <Ellipse Width="1.5" Height="1.5" Fill="White" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1.8,4" />
+       </Grid>
       </Grid>
-      <Grid Grid.Row="3" Margin="20,0,20,0">
-       <TextBlock x:Name="BatteryText" FontSize="10" Text="Battery" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,0,0" />
-      </Grid>
-     </Grid>
-         <Grid x:Name="RightEye" Width="24" Height="24" Margin="2,0">
+          <Grid x:Name="RightEye" Width="24" Height="24" Margin="2,0">
           <Grid.RenderTransform><ScaleTransform x:Name="RightEyeScale" CenterX="12" CenterY="12" /></Grid.RenderTransform>
           <Ellipse x:Name="RightEyeWhite" Width="22" Height="22" Stroke="#17171B" StrokeThickness="1">
            <Ellipse.Fill>
@@ -272,6 +297,9 @@
        </ListBox>
       </Grid>
      </Grid>
+     <Grid Grid.Row="3" Margin="20,0,0,0">
+      <TextBlock x:Name="BatteryText" FontSize="10" Text="Battery" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,0,0" />
+     </Grid>
 
     </Grid>
     <Grid x:Name="SettingsPanel" Visibility="Collapsed" Opacity="1" Margin="20,16,20,14">
@@ -321,12 +349,7 @@
       </UniformGrid>
       <Grid Margin="0,4,0,12"><TextBlock Text="Default focus minutes" Style="{StaticResource SectionLabel}" VerticalAlignment="Center" /><TextBox x:Name="FocusMinutesBox" Width="52" Height="28" Background="{DynamicResource PanelBrush}" Foreground="{DynamicResource TextBrush}" BorderBrush="{DynamicResource LineBrush}" Padding="8,3" HorizontalAlignment="Right" LostFocus="FocusMinutes_LostFocus" AutomationProperties.Name="Default focus minutes" /></Grid>
       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="10" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><Button Content="Next display" Style="{StaticResource PulseButton}" Click="Display_Click" /><Button Grid.Column="2" Content="Test animation" Style="{StaticResource PulseButton}" Click="Test_Click" /></Grid>
-      <Grid Margin="0,10,0,0">
-       <Grid.ColumnDefinitions><ColumnDefinition Width="22" /><ColumnDefinition Width="*" /><ColumnDefinition Width="34" /></Grid.ColumnDefinitions>
-       <Button x:Name="MuteButton" Style="{StaticResource IconButton}" Width="22" Height="28" MinHeight="28" FontSize="12" Foreground="{DynamicResource MutedBrush}" Content="&#xE767;" Click="Mute_Click" ToolTip="Mute / unmute" AutomationProperties.Name="Mute or unmute system audio" />
-       <Slider x:Name="VolumeSlider" Grid.Column="1" Style="{StaticResource PulseSlider}" Minimum="0" Maximum="100" ValueChanged="Volume_Changed" Margin="9,0" AutomationProperties.Name="System volume" />
-       <TextBlock x:Name="VolumeText" Grid.Column="2" Text="--" FontSize="10" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" />
-      </Grid>
+
       <TextBlock Text="Brightness" Style="{StaticResource SectionLabel}" Margin="0,12,0,0" />
       <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="34" /></Grid.ColumnDefinitions><Slider x:Name="BrightnessSlider" Style="{StaticResource PulseSlider}" Minimum="0" Maximum="100" ValueChanged="Brightness_Changed" PreviewMouseLeftButtonUp="Brightness_MouseUp" PreviewKeyUp="Brightness_KeyUp" AutomationProperties.Name="Internal display brightness" /><TextBlock x:Name="BrightnessValue" Grid.Column="1" FontSize="10" Foreground="{DynamicResource MutedBrush}" HorizontalAlignment="Right" VerticalAlignment="Center" /></Grid>
       <TextBlock x:Name="BrightnessStatus" Text="Checking display support…" FontSize="9" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" />
@@ -361,7 +384,8 @@
      <Button x:Name="AppCatalogAddButton" Grid.Row="4" Content="Add to slot" Style="{StaticResource AccentButton}" IsEnabled="False" Click="AppCatalog_Add_Click" AutomationProperties.Name="Add selected app to slot" />
      <Grid Grid.Row="5"><Button Content="Refresh" Style="{StaticResource GhostButton}" FontSize="9" HorizontalAlignment="Left" Click="AppCatalog_Refresh_Click" AutomationProperties.Name="Refresh installed app list" /><Button Content="Advanced browse" Style="{StaticResource GhostButton}" FontSize="9" HorizontalAlignment="Right" Click="AppCatalog_AdvancedBrowse_Click" AutomationProperties.Name="Advanced browse for application" /></Grid>
     </Grid>
-   </Grid>
-  </Border>
- </Grid>
-</Window>
+    </Grid>
+   </Border>
+
+  </Grid>
+ </Window>

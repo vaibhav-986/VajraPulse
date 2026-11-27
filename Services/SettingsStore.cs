@@ -32,7 +32,7 @@ public sealed class PulseSettings
 {
     public int SchemaVersion { get; set; } = SettingsStore.CurrentSchemaVersion;
     [JsonIgnore] public bool IsFutureSchema { get; set; }
-    public int TopOffset { get; set; } = 10;
+    public int TopOffset { get; set; }
     public bool HoverExpand { get; set; } = true;
     public bool HideInFullscreen { get; set; } = true;
     public bool ReducedMotion { get; set; }

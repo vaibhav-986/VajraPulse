@@ -7,6 +7,7 @@ namespace VajraPulse.Services;
 public sealed class AudioService : IDisposable
 {
     private IAudioEndpointVolume? _endpoint;
+    private IAudioMeterInformation? _meter;
     private string? _deviceId;
     public bool IsAvailable { get; private set; }
     public float Volume { get; private set; }
@@ -30,6 +31,13 @@ public sealed class AudioService : IDisposable
                 Guid iid = typeof(IAudioEndpointVolume).GUID;
                 Marshal.ThrowExceptionForHR(device.Activate(ref iid, ClsCtxAll, IntPtr.Zero, out object obj));
                 _endpoint = (IAudioEndpointVolume)obj;
+                try
+                {
+                    Guid meterIid = typeof(IAudioMeterInformation).GUID;
+                    Marshal.ThrowExceptionForHR(device.Activate(ref meterIid, ClsCtxAll, IntPtr.Zero, out object meter));
+                    _meter = (IAudioMeterInformation)meter;
+                }
+                catch (COMException) { _meter = null; }
                 _deviceId = id;
                 ReadDeviceProperties(device);
             }
@@ -57,6 +65,17 @@ public sealed class AudioService : IDisposable
             Volume = Math.Clamp(level, 0, 1);
         }
         catch (COMException) { ReleaseEndpoint(); }
+    }
+
+    public float GetPeakLevel()
+    {
+        if (_meter == null) return 0f;
+        try
+        {
+            if (_meter.GetPeakValue(out float peak) < 0) return 0f;
+            return Math.Clamp(peak, 0f, 1f);
+        }
+        catch (COMException) { return 0f; }
     }
 
     public void ToggleMute()
@@ -100,6 +119,8 @@ public sealed class AudioService : IDisposable
 
     private void ReleaseEndpoint()
     {
+        Release(_meter);
+        _meter = null;
         Release(_endpoint);
         _endpoint = null;
         _deviceId = null;

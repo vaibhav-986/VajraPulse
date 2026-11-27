@@ -34,10 +34,7 @@ public partial class MainWindow
     private readonly DispatcherTimer _brightnessDebounce = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private bool _featuresInitialized, _featuresModal, _featureTickBusy, _brightnessBusy, _brightnessSending;
     private bool _seekPending, _seekSending, _brightnessPending, _dropHover, _shelfDragging, _privacyBusy, _bluetoothBusy, _bluetoothInitialized;
-    private string? _lastDeviceId;
     private string? _trackedDownloadId, _displayedDownloadId, _renderedDesktopActivityId, _privacySettingsUri;
-    private bool? _lastMuted;
-    private bool _audioSnapshotTaken, _wasAudioAvailable;
     private BrightnessSnapshot? _brightness;
     private CalendarMeeting? _nextMeeting;
     private Point _shelfDragStart;
@@ -67,7 +64,7 @@ public partial class MainWindow
         LiveStatePanel.MouseLeftButtonUp += (_, _) =>
         {
             if (_liveKind is LiveKind.Privacy or LiveKind.Download or LiveKind.Bluetooth) OpenDesktopActivity();
-            else if (_liveKind is LiveKind.Volume or LiveKind.Brightness or LiveKind.Headphones) OpenSettings();
+            else if (_liveKind is LiveKind.Brightness or LiveKind.Headphones) OpenSettings();
             else { if (_liveKind == LiveKind.Calendar) SetActivity(Activity.Calendar); else if (_liveKind == LiveKind.Inbox) SetActivity(Activity.Inbox); Expand(true); }
         };
         await RefreshBrightnessAsync();
@@ -378,7 +375,7 @@ public partial class MainWindow
         Brush brush = (Brush)FindResource(color);
         LiveStateTitle.Text = _liveTitle; LiveStateDetail.Text = _liveDetail;
         LiveStateIcon.Foreground = LiveStateValue.Foreground = LiveStateFill.Background = brush;
-        LiveStateIcon.Text = _liveKind switch { LiveKind.Charging => "", LiveKind.Brightness => "", LiveKind.Headphones => "", LiveKind.Calendar => "", LiveKind.Inbox => "", LiveKind.Privacy => "", LiveKind.Download => "", LiveKind.Bluetooth => "", _ => _audio.IsMuted ? "" : "" };
+        LiveStateIcon.Text = _liveKind switch { LiveKind.Charging => "", LiveKind.Brightness => "", LiveKind.Headphones => "", LiveKind.Calendar => "", LiveKind.Inbox => "", LiveKind.Privacy => "", LiveKind.Download => "", LiveKind.Bluetooth => "", _ => "" };
         LiveStateTrack.Visibility = _liveLevel.HasValue ? Visibility.Visible : Visibility.Hidden;
         LiveStateValue.Text = _liveLevel.HasValue ? Math.Round(_liveLevel.Value * 100) + "%" : "";
         LiveStateFill.BeginAnimation(WidthProperty, null);
@@ -390,27 +387,16 @@ public partial class MainWindow
     private void TestLiveState()
     {
         Collapse();
-        switch (_animationCycle++ % 4)
+        switch (_animationCycle++ % 3)
         {
             case 0: ShowLiveState(LiveKind.Charging, "Charging animation test", "No power state changed", _battery?.Percent >= 0 ? _battery.Percent / 100d : null, 4); break;
-            case 1: ShowLiveState(LiveKind.Volume, "Volume animation test", "No audio settings changed", _audio.IsAvailable ? _audio.Volume : null, 4); break;
-            case 2: ShowLiveState(LiveKind.Brightness, "Brightness animation test", "No display settings changed", _brightness?.IsAvailable == true ? _brightness.Percent / 100d : null, 4); break;
+            case 1: ShowLiveState(LiveKind.Brightness, "Brightness animation test", "No display settings changed", _brightness?.IsAvailable == true ? _brightness.Percent / 100d : null, 4); break;
             default: ShowLiveState(LiveKind.Headphones, "Headphone animation test", "No connection state changed", null, 4); break;
         }
     }
     private void DetectAudioChanges()
     {
-        if (_audio.IsAvailable)
-        {
-            if ((_lastDeviceId != null && _lastDeviceId != _audio.DeviceId) || (_audioSnapshotTaken && !_wasAudioAvailable))
-                ShowLiveState(_audio.IsHeadphones ? LiveKind.Headphones : LiveKind.Volume, _audio.IsHeadphones ? "Headphones active" : "Audio output changed", _audio.DeviceName, null, 4);
-            if (_lastMuted.HasValue && _lastMuted.Value != _audio.IsMuted)
-                ShowLiveState(LiveKind.Volume, _audio.IsMuted ? "Muted" : "Sound on", _audio.DeviceName, _audio.IsMuted ? 0 : _audio.Volume, 2);
-            _lastDeviceId = _audio.DeviceId;
-            _lastMuted = _audio.IsMuted;
-        }
-        _audioSnapshotTaken = true;
-        _wasAudioAvailable = _audio.IsAvailable;
+        // Audio detection removed
     }
 
     private async Task RefreshBrightnessAsync()

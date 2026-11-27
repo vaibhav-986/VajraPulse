@@ -1,6 +1,7 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
  <LinearGradientBrush x:Key="IslandBrush" StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#FF03060A" Offset="0" /><GradientStop Color="#FF090D17" Offset="1" /></LinearGradientBrush>
+ <SolidColorBrush x:Key="IslandShoulderBrush" Color="#FF03060A" />
  <SolidColorBrush x:Key="PanelBrush" Color="#FF111827" />
  <SolidColorBrush x:Key="PanelHoverBrush" Color="#FF1B2840" />
  <SolidColorBrush x:Key="TextBrush" Color="#FFF3FDFF" />
@@ -12,8 +13,9 @@
  <SolidColorBrush x:Key="DangerBrush" Color="#FFFF4D8D" />
  <SolidColorBrush x:Key="LineBrush" Color="#FF20354A" />
  <SolidColorBrush x:Key="FocusRingBrush" Color="#FF7AFAFF" />
- <SolidColorBrush x:Key="IslandBorderBrush" Color="#CC3DF6FF" />
+ <LinearGradientBrush x:Key="IslandBorderBrush" StartPoint="0,0" EndPoint="0,1"><GradientStop Color="#F23DF6FF" Offset="0" /><GradientStop Color="#B33DF6FF" Offset="0.55" /><GradientStop Color="#593DF6FF" Offset="1" /></LinearGradientBrush>
  <SolidColorBrush x:Key="ArtworkDominantBrush" Color="#FF3DF6FF" />
  <SolidColorBrush x:Key="ArtworkMutedBrush" Color="#FF5B8EAA" />
  <DropShadowEffect x:Key="IslandEffect" Color="#19EAF5" BlurRadius="24" ShadowDepth="0" Opacity="0.62" />
+ <DropShadowEffect x:Key="ProgressGlow" Color="#FF3DF6FF" BlurRadius="8" ShadowDepth="0" Opacity="0.8" />
 </ResourceDictionary>
