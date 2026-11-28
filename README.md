@@ -26,11 +26,18 @@ A native Windows desktop island with a true-black compact pill, single-activity 
 - Music artwork can now accent the music timeline, playback bars, and compact media-progress bar.
 - Refined eye reactions, compact progress visuals, and settings persistence.
 
-## Run
+## Download and run
 
-Double-click `Start-VajraPulse.cmd`. The ordinary app uses the installed .NET 8 Desktop Runtime.
+Download the latest `VajraPulse-*-win-x64.zip` from [Releases](https://github.com/vaibhav-986/VajraPulse/releases/latest), extract it, and double-click `VajraPulse.exe`. The package is self-contained, so no .NET install is required, and it targets 64-bit Windows 10 build 19041 or newer.
+
+If Windows SmartScreen appears, choose **More info → Run anyway**; the build is not code-signed.
+
+## Run from source
+
+Building from source requires the .NET 8 SDK. Build once, then double-click `Start-VajraPulse.cmd` or run:
 
 ```powershell
+dotnet build VajraPulse.csproj -c Release
 .\bin\Release\net8.0-windows10.0.19041.0\VajraPulse.exe
 ```
 
