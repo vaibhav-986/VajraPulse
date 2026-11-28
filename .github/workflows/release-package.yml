@@ -1,0 +1,122 @@
+name: Build release package
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to build and attach the package to
+        required: true
+        type: string
+      upload:
+        description: Upload the ZIP to the release (turn off for a build-only test)
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-package-${{ github.event.release.tag_name || inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    runs-on: windows-latest
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish self-contained single-file app
+        shell: pwsh
+        run: |
+          dotnet publish VajraPulse.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true `
+            -p:EnableCompressionInSingleFile=true `
+            -p:DebugType=None `
+            -p:DebugSymbols=false `
+            -o publish
+
+      - name: Build release ZIP
+        id: package
+        shell: pwsh
+        run: |
+          $match = Select-String -Path VajraPulse.csproj -Pattern '<Version>\s*([^<]+)\s*</Version>'
+          if ($match) {
+            $version = $match.Matches[0].Groups[1].Value.Trim()
+          } else {
+            $version = "${{ github.event.release.tag_name || inputs.tag }}" -replace '^v', ''
+          }
+
+          $stage = "package/VajraPulse-$version-win-x64"
+          New-Item -ItemType Directory -Path $stage -Force | Out-Null
+          Copy-Item publish/VajraPulse.exe $stage
+          Copy-Item LICENSE $stage
+
+          $readme = @(
+            "Vajra Pulse $version - Windows x64",
+            "==================================",
+            "",
+            "QUICK START",
+            "1. Extract this ZIP to a normal folder (for example Desktop\VajraPulse).",
+            "   Do NOT run the EXE from inside the ZIP preview.",
+            "2. Double-click VajraPulse.exe.",
+            "",
+            "No installer and no .NET download are required - the .NET 8 runtime is",
+            "bundled inside the EXE.",
+            "",
+            "IF WINDOWS BLOCKS IT",
+            "- SmartScreen (""Windows protected your PC""): click More info, then",
+            "  Run anyway. The app is not code-signed.",
+            "- If Windows marks the ZIP as blocked: right-click the ZIP > Properties >",
+            "  check Unblock > Apply, then extract again.",
+            "- Smart App Control / antivirus may still block unsigned apps. Only",
+            "  bypass this if you trust the file and your own security policy allows it.",
+            "",
+            "REQUIREMENTS",
+            "- 64-bit Windows 10 build 19041 (20H1) or newer, or Windows 11.",
+            "- Right-click the pill for Settings; the tray icon has Show/Hide, Settings",
+            "  and Quit.",
+            "",
+            "Vajra Pulse stores its settings locally. No account, cloud service, or",
+            "telemetry is used."
+          ) -join "`r`n"
+          Set-Content -Path (Join-Path $stage 'READ-ME.txt') -Value $readme -Encoding utf8
+
+          $zip = "package/VajraPulse-$version-win-x64.zip"
+          Compress-Archive -Path $stage -DestinationPath $zip -CompressionLevel Optimal
+
+          $hash = (Get-FileHash $zip -Algorithm SHA256).Hash
+          "zip=$zip" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "sha256=$hash" >> $env:GITHUB_OUTPUT
+
+          @(
+            "### Vajra Pulse $version package",
+            "",
+            "- Asset: ``$zip``",
+            "- SHA-256: ``$hash``"
+          ) >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Attach ZIP to GitHub release
+        if: ${{ github.event_name == 'release' || inputs.upload }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          ZIP: ${{ steps.package.outputs.zip }}
+        run: |
+          gh release upload $env:TAG $env:ZIP --repo ${{ github.repository }} --clobber
